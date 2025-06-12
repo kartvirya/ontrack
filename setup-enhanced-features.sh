@@ -1,0 +1,63 @@
+#!/bin/bash
+
+echo "🚀 Setting up OnTrack Enhanced Features..."
+echo ""
+
+# Install backend dependencies
+echo "📦 Installing backend dependencies..."
+cd server/chatbot-backend
+npm install express-rate-limit nodemailer
+
+# Install frontend dependencies (if any new ones are needed)
+echo "📦 Checking frontend dependencies..."
+cd ../../client/chatbot-frontend-2
+npm install
+
+echo ""
+echo "✅ Enhanced Features Setup Complete!"
+echo ""
+echo "🎉 New Features Added:"
+echo "  ✅ Dedicated Authentication Page"
+echo "  ✅ Password Reset Functionality"
+echo "  ✅ Email Service for Password Resets"
+echo "  ✅ Rate Limiting for Security"
+echo "  ✅ Protected Routes"
+echo "  ✅ Enhanced User Experience"
+echo "  ✅ Better Error Handling"
+echo "  ✅ Mobile-Responsive Design"
+echo ""
+echo "🔧 Configuration Notes:"
+echo "  • Password reset emails are logged to console in development"
+echo "  • Rate limiting is active (5 auth attempts per 15 minutes)"
+echo "  • Protected routes redirect to auth page"
+echo "  • Reset tokens expire after 1 hour"
+echo ""
+echo "📝 Environment Variables (optional for production):"
+echo "  • SMTP_HOST - Email server host"
+echo "  • SMTP_PORT - Email server port"
+echo "  • SMTP_USER - Email username"
+echo "  • SMTP_PASS - Email password"
+echo "  • FROM_EMAIL - Sender email address"
+echo "  • FRONTEND_URL - Frontend URL for email links"
+echo ""
+echo "🎯 Routes Added:"
+echo "  • /auth - Dedicated authentication page"
+echo "  • /reset-password - Password reset page"
+echo ""
+echo "🔒 Security Enhancements:"
+echo "  • Rate limiting on all auth endpoints"
+echo "  • Password reset token expiration"
+echo "  • Secure password validation"
+echo "  • Protected user profile access"
+echo ""
+echo "📱 UI/UX Improvements:"
+echo "  • Modern gradient design"
+echo "  • Password visibility toggles"
+echo "  • Loading states and spinners"
+echo "  • Comprehensive error handling"
+echo "  • Mobile-first responsive design"
+echo ""
+echo "🚀 Ready to launch! Start the application with:"
+echo "  Backend:  cd server/chatbot-backend && npm start"
+echo "  Frontend: cd client/chatbot-frontend-2 && npm start"
+echo "" 
