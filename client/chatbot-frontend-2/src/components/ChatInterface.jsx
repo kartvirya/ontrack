@@ -322,14 +322,26 @@ const ChatInterface = () => {
           <div className="flex items-center space-x-3">
             <button
               onClick={() => toggleSidebar()}
-              className="p-2 rounded-md hover:bg-gray-100 transition-colors"
-              title="Toggle History"
+              className={`p-2 rounded-md transition-colors relative ${
+                isAuthenticated() 
+                  ? 'hover:bg-blue-50 text-blue-600 border border-blue-200' 
+                  : 'hover:bg-gray-100 text-gray-600'
+              }`}
+              title={isAuthenticated() ? "Chat History (Click to view saved conversations)" : "Sign in to access chat history"}
             >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
+              {isAuthenticated() && (
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+              )}
             </button>
             <h1 className="text-xl font-semibold text-gray-900">OnTrack Assistant</h1>
+            {isAuthenticated() && !showSidebar && (
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                Click ☰ for chat history
+              </span>
+            )}
           </div>
           
           <div className="flex items-center space-x-3">
@@ -382,22 +394,35 @@ const ChatInterface = () => {
           <div>
             {messages.length === 0 && (
               <div className="py-10 px-4 text-center text-gray-400">
-                <p>How can I help you today?</p>
-                {!isAuthenticated() && (
-                  <p className="text-sm mt-2">
-                    <button
-                      onClick={handleAuthClick}
-                      className="text-blue-600 hover:text-blue-700 underline"
-                    >
-                      Create an account
-                    </button>
-                    {' '}to get your personal AI assistant with enhanced capabilities and chat history.
-                  </p>
-                )}
-                {isAuthenticated() && (
-                  <p className="text-sm mt-2 text-gray-500">
-                    Click the menu button <svg className="w-4 h-4 inline mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg> to access your chat history.
-                  </p>
+                <p className="text-lg mb-4">How can I help you today?</p>
+                {!isAuthenticated() ? (
+                  <div className="text-sm mt-2 space-y-2">
+                    <p>
+                      <button
+                        onClick={handleAuthClick}
+                        className="text-blue-600 hover:text-blue-700 underline"
+                      >
+                        Create an account
+                      </button>
+                      {' '}to get your personal AI assistant with enhanced capabilities and chat history.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-sm mt-4 space-y-3">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-800">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <span className="font-medium">Chat History Available!</span>
+                      </div>
+                      <p>Click the menu button (☰) in the top-left to view your saved conversations</p>
+                    </div>
+                    <p className="text-gray-500">
+                      You're logged in as <strong>{user?.username}</strong>. 
+                      All your conversations are automatically saved.
+                    </p>
+                  </div>
                 )}
               </div>
             )}
