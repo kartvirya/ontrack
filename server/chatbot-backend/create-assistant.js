@@ -7,10 +7,10 @@ const openai = new OpenAI({
 
 async function createAssistant() {
   try {
-    console.log('🤖 Creating OnTrack Train Assistant...');
+    console.log('🤖 Creating Lisa Train Assistant...');
     
     const assistant = await openai.beta.assistants.create({
-      name: "OnTrack Train Assistant",
+      name: "Lisa Train Assistant",
       instructions: `You are Lisa, an expert AI assistant for train maintenance and technical support. You specialize in:
 
 1. Train component identification and troubleshooting

@@ -1,8 +1,6 @@
 const jwt = require('jsonwebtoken');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const { query } = require('../config/database');
 
-const DB_PATH = path.join(__dirname, '..', 'database.sqlite');
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // Middleware to verify JWT token
@@ -41,9 +39,8 @@ const requireActiveUser = (req, res, next) => {
 
 // Middleware to log user activity
 const logActivity = (action) => {
-  return (req, res, next) => {
-    const db = new sqlite3.Database(DB_PATH);
-    
+  return async (req, res, next) => {
+    try {
     const userId = req.user ? req.user.id : null;
     const ipAddress = req.ip || req.connection.remoteAddress;
     const userAgent = req.get('User-Agent');
@@ -53,56 +50,92 @@ const logActivity = (action) => {
       body: req.method === 'POST' ? req.body : undefined
     });
 
-    db.run(`
+      await query(`
       INSERT INTO activity_logs (user_id, action, details, ip_address, user_agent)
-      VALUES (?, ?, ?, ?, ?)
-    `, [userId, action, details, ipAddress, userAgent], (err) => {
-      if (err) {
-        console.error('Error logging activity:', err);
+        VALUES ($1, $2, $3, $4, $5)
+      `, [userId, action, details, ipAddress, userAgent]);
+    } catch (error) {
+      console.error('Error logging activity:', error);
       }
-      db.close();
-    });
 
     next();
   };
 };
 
-// Generate JWT token
+// Helper function to generate JWT token
 const generateToken = (user) => {
   return jwt.sign(
     {
       id: user.id,
       username: user.username,
       email: user.email,
-      role: user.role,
-      status: user.status
+      role: user.role 
     },
     JWT_SECRET,
     { expiresIn: '24h' }
   );
 };
 
-// Verify user credentials
-const verifyUser = (userId) => {
-  return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(DB_PATH);
-    
-    db.get(`
+// Helper function to verify user exists and is active
+const verifyUser = async (userId) => {
+  try {
+    const result = await query(`
       SELECT id, username, email, role, status, openai_assistant_id, vector_store_id
       FROM users 
-      WHERE id = ? AND status = 'active'
-    `, [userId], (err, row) => {
-      db.close();
+      WHERE id = $1 AND status = 'active'
+    `, [userId]);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error verifying user:', error);
+    return null;
+  }
+};
+
+// Middleware to validate session
+const validateSession = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
       
-      if (err) {
-        reject(err);
-      } else if (!row) {
-        reject(new Error('User not found or inactive'));
-      } else {
-        resolve(row);
-      }
-    });
-  });
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    // Check if session exists and is valid
+    const result = await query(`
+      SELECT us.*, u.username, u.email, u.role, u.status
+      FROM user_sessions us
+      JOIN users u ON us.user_id = u.id
+      WHERE us.session_token = $1 AND us.expires_at > NOW()
+    `, [token]);
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+
+    const session = result.rows[0];
+    
+    // Check if user is active
+    if (session.status !== 'active') {
+      return res.status(403).json({ error: 'Account is suspended' });
+    }
+
+    req.user = {
+      id: session.user_id,
+      username: session.username,
+      email: session.email,
+      role: session.role
+    };
+
+    next();
+  } catch (error) {
+    console.error('Session validation error:', error);
+    return res.status(500).json({ error: 'Session validation failed' });
+  }
 };
 
 module.exports = {
@@ -111,6 +144,7 @@ module.exports = {
   requireActiveUser,
   logActivity,
   generateToken,
+  validateSession,
   verifyUser,
   JWT_SECRET
 }; 

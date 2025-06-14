@@ -131,7 +131,7 @@ const SearchComponent = ({
             onFocus={() => setShowSuggestions(suggestions.length > 0)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
             placeholder={placeholder}
-            className="w-full pl-10 pr-12 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            className="w-full pl-10 pr-12 py-2 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           />
           
           <div className="absolute inset-y-0 right-0 flex items-center">
@@ -264,13 +264,6 @@ const SearchComponent = ({
           </div>
         </div>
       )}
-
-      {/* Search Shortcuts Help */}
-      <div className="mt-2 text-xs text-gray-500">
-        <span>Press </span>
-        <kbd className="px-1 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">Ctrl+K</kbd>
-        <span> to focus search</span>
-      </div>
     </div>
   );
 };

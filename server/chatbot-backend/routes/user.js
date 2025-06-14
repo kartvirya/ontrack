@@ -1,13 +1,12 @@
 const express = require('express');
+const { query, getClient } = require('../config/database');
+const { authenticateToken, logActivity } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
-const { authenticateToken, logActivity } = require('../middleware/auth');
 
 const router = express.Router();
-const DB_PATH = path.join(__dirname, '..', 'database.sqlite');
 
 // Configure multer for avatar uploads
 const upload = multer({
@@ -26,97 +25,119 @@ const upload = multer({
   }
 });
 
-// Apply authentication to all routes
+// Apply authentication middleware to all routes
 router.use(authenticateToken);
 
 // ===== PROFILE MANAGEMENT =====
 
 // Get user profile
-router.get('/profile', logActivity('user_view_profile'), (req, res) => {
+router.get('/profile', logActivity('user_view_profile'), async (req, res) => {
+  try {
   const userId = req.user.id;
-  const db = new sqlite3.Database(DB_PATH);
   
-  db.get(`
+    const result = await query(`
     SELECT 
       u.id, u.username, u.email, u.role, u.status, u.created_at, u.last_login,
-      p.first_name, p.last_name, p.phone, p.department, p.job_title, 
-      p.bio, p.avatar_url, p.timezone, p.language, p.date_format
+        u.openai_assistant_id, u.vector_store_id,
+        up.first_name, up.last_name, up.phone, up.department, up.job_title,
+        up.bio, up.avatar_url, up.timezone, up.language, up.date_format
     FROM users u
-    LEFT JOIN user_profiles p ON u.id = p.user_id
-    WHERE u.id = ?
-  `, [userId], (err, user) => {
-    db.close();
+      LEFT JOIN user_profiles up ON u.id = up.user_id
+      WHERE u.id = $1
+    `, [userId]);
     
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (!user) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    res.json({ profile: user });
-  });
+    const user = result.rows[0];
+    
+    res.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        createdAt: user.created_at,
+        lastLogin: user.last_login,
+        hasAgent: !!(user.openai_assistant_id && user.vector_store_id),
+        profile: {
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone,
+          department: user.department,
+          jobTitle: user.job_title,
+          bio: user.bio,
+          avatarUrl: user.avatar_url,
+          timezone: user.timezone || 'UTC',
+          language: user.language || 'en',
+          dateFormat: user.date_format || 'MM/DD/YYYY'
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Update user profile
-router.put('/profile', logActivity('user_update_profile'), (req, res) => {
+router.put('/profile', logActivity('user_update_profile'), async (req, res) => {
+  const client = await getClient();
+  
+  try {
   const userId = req.user.id;
   const {
-    first_name, last_name, phone, department, job_title, bio,
-    timezone, language, date_format
+      firstName, lastName, phone, department, jobTitle, bio, avatarUrl,
+      timezone, language, dateFormat
   } = req.body;
   
-  const db = new sqlite3.Database(DB_PATH);
+    await client.query('BEGIN');
   
-  // Check if profile exists
-  db.get(`SELECT id FROM user_profiles WHERE user_id = ?`, [userId], (err, profile) => {
-    if (err) {
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (profile) {
-      // Update existing profile
-      db.run(`
-        UPDATE user_profiles 
-        SET first_name = ?, last_name = ?, phone = ?, department = ?, 
-            job_title = ?, bio = ?, timezone = ?, language = ?, 
-            date_format = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = ?
-      `, [first_name, last_name, phone, department, job_title, bio, 
-          timezone, language, date_format, userId], function(err) {
-        db.close();
-        
-        if (err) {
-          return res.status(500).json({ error: 'Error updating profile' });
-        }
-        
+    // Update or insert profile
+    await client.query(`
+      INSERT INTO user_profiles 
+      (user_id, first_name, last_name, phone, department, job_title, bio, 
+       avatar_url, timezone, language, date_format, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
+      ON CONFLICT (user_id) 
+      DO UPDATE SET 
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        phone = EXCLUDED.phone,
+        department = EXCLUDED.department,
+        job_title = EXCLUDED.job_title,
+        bio = EXCLUDED.bio,
+        avatar_url = EXCLUDED.avatar_url,
+        timezone = EXCLUDED.timezone,
+        language = EXCLUDED.language,
+        date_format = EXCLUDED.date_format,
+        updated_at = CURRENT_TIMESTAMP
+    `, [userId, firstName, lastName, phone, department, jobTitle, bio, 
+        avatarUrl, timezone, language, dateFormat]);
+
+    // Update users table timestamp
+    await client.query(`
+      UPDATE users 
+      SET updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $1
+    `, [userId]);
+
+    await client.query('COMMIT');
         res.json({ message: 'Profile updated successfully' });
-      });
-    } else {
-      // Create new profile
-      db.run(`
-        INSERT INTO user_profiles 
-        (user_id, first_name, last_name, phone, department, job_title, 
-         bio, timezone, language, date_format)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [userId, first_name, last_name, phone, department, job_title, 
-          bio, timezone, language, date_format], function(err) {
-        db.close();
-        
-        if (err) {
-          return res.status(500).json({ error: 'Error creating profile' });
-        }
-        
-        res.json({ message: 'Profile created successfully' });
-      });
-    }
-  });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating profile:', error);
+    res.status(500).json({ error: 'Error updating profile' });
+  } finally {
+    client.release();
+  }
 });
 
 // Upload avatar
-router.post('/profile/avatar', upload.single('avatar'), logActivity('user_upload_avatar'), (req, res) => {
+router.post('/profile/avatar', upload.single('avatar'), logActivity('user_upload_avatar'), async (req, res) => {
+  try {
   const userId = req.user.id;
   
   if (!req.file) {
@@ -124,45 +145,42 @@ router.post('/profile/avatar', upload.single('avatar'), logActivity('user_upload
   }
   
   const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-  const db = new sqlite3.Database(DB_PATH);
   
   // Update or create profile with avatar URL
-  db.run(`
-    INSERT OR REPLACE INTO user_profiles 
+    await query(`
+      INSERT INTO user_profiles 
     (user_id, avatar_url, updated_at)
-    VALUES (?, ?, CURRENT_TIMESTAMP)
-  `, [userId, avatarUrl], function(err) {
-    db.close();
-    
-    if (err) {
-      return res.status(500).json({ error: 'Error saving avatar' });
-    }
+      VALUES ($1, $2, CURRENT_TIMESTAMP)
+      ON CONFLICT (user_id)
+      DO UPDATE SET 
+        avatar_url = EXCLUDED.avatar_url,
+        updated_at = CURRENT_TIMESTAMP
+    `, [userId, avatarUrl]);
     
     res.json({ 
       message: 'Avatar uploaded successfully',
       avatar_url: avatarUrl
     });
-  });
+  } catch (error) {
+    console.error('Error uploading avatar:', error);
+    res.status(500).json({ error: 'Error saving avatar' });
+  }
 });
 
 // ===== SETTINGS MANAGEMENT =====
 
 // Get user settings
-router.get('/settings', logActivity('user_view_settings'), (req, res) => {
+router.get('/settings', logActivity('user_view_settings'), async (req, res) => {
+  try {
   const userId = req.user.id;
-  const db = new sqlite3.Database(DB_PATH);
-  
-  db.get(`
-    SELECT * FROM user_settings WHERE user_id = ?
-  `, [userId], (err, settings) => {
-    db.close();
     
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
+    const result = await query(`
+      SELECT * FROM user_settings WHERE user_id = $1
+    `, [userId]);
+
+    let settings;
+    if (result.rows.length === 0) {
     // Return default settings if none exist
-    if (!settings) {
       settings = {
         theme: 'light',
         chat_sound_enabled: true,
@@ -175,14 +193,20 @@ router.get('/settings', logActivity('user_view_settings'), (req, res) => {
         show_timestamps: true,
         compact_mode: false
       };
+    } else {
+      settings = result.rows[0];
     }
     
     res.json({ settings });
-  });
+  } catch (error) {
+    console.error('Error fetching user settings:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Update user settings
-router.put('/settings', logActivity('user_update_settings'), (req, res) => {
+router.put('/settings', logActivity('user_update_settings'), async (req, res) => {
+  try {
   const userId = req.user.id;
   const {
     theme, chat_sound_enabled, email_notifications, push_notifications,
@@ -190,31 +214,41 @@ router.put('/settings', logActivity('user_update_settings'), (req, res) => {
     sidebar_collapsed, show_timestamps, compact_mode
   } = req.body;
   
-  const db = new sqlite3.Database(DB_PATH);
-  
-  db.run(`
-    INSERT OR REPLACE INTO user_settings 
+    await query(`
+      INSERT INTO user_settings 
     (user_id, theme, chat_sound_enabled, email_notifications, push_notifications,
      auto_save_conversations, conversation_retention_days, default_assistant_model,
      sidebar_collapsed, show_timestamps, compact_mode, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
+      ON CONFLICT (user_id) 
+      DO UPDATE SET 
+        theme = EXCLUDED.theme,
+        chat_sound_enabled = EXCLUDED.chat_sound_enabled,
+        email_notifications = EXCLUDED.email_notifications,
+        push_notifications = EXCLUDED.push_notifications,
+        auto_save_conversations = EXCLUDED.auto_save_conversations,
+        conversation_retention_days = EXCLUDED.conversation_retention_days,
+        default_assistant_model = EXCLUDED.default_assistant_model,
+        sidebar_collapsed = EXCLUDED.sidebar_collapsed,
+        show_timestamps = EXCLUDED.show_timestamps,
+        compact_mode = EXCLUDED.compact_mode,
+        updated_at = CURRENT_TIMESTAMP
   `, [userId, theme, chat_sound_enabled, email_notifications, push_notifications,
       auto_save_conversations, conversation_retention_days, default_assistant_model,
-      sidebar_collapsed, show_timestamps, compact_mode], function(err) {
-    db.close();
-    
-    if (err) {
-      return res.status(500).json({ error: 'Error updating settings' });
-    }
+        sidebar_collapsed, show_timestamps, compact_mode]);
     
     res.json({ message: 'Settings updated successfully' });
-  });
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    res.status(500).json({ error: 'Error updating settings' });
+  }
 });
 
 // ===== PASSWORD MANAGEMENT =====
 
 // Change password
 router.put('/password', logActivity('user_change_password'), async (req, res) => {
+  try {
   const userId = req.user.id;
   const { current_password, new_password } = req.body;
   
@@ -226,81 +260,66 @@ router.put('/password', logActivity('user_change_password'), async (req, res) =>
     return res.status(400).json({ error: 'New password must be at least 6 characters long' });
   }
   
-  const db = new sqlite3.Database(DB_PATH);
-  
   // Verify current password
-  db.get(`SELECT password_hash FROM users WHERE id = ?`, [userId], async (err, user) => {
-    if (err) {
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
-    }
+    const userResult = await query(`
+      SELECT password_hash FROM users WHERE id = $1
+    `, [userId]);
     
-    if (!user) {
-      db.close();
+    if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
     
+    const user = userResult.rows[0];
     const isValidPassword = await bcrypt.compare(current_password, user.password_hash);
     
     if (!isValidPassword) {
-      db.close();
       return res.status(400).json({ error: 'Current password is incorrect' });
     }
     
     // Hash new password and update
     const hashedPassword = await bcrypt.hash(new_password, 10);
     
-    db.run(`
+    await query(`
       UPDATE users 
-      SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `, [hashedPassword, userId], function(err) {
-      db.close();
-      
-      if (err) {
-        return res.status(500).json({ error: 'Error updating password' });
-      }
+      SET password_hash = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+    `, [hashedPassword, userId]);
       
       res.json({ message: 'Password updated successfully' });
-    });
-  });
+  } catch (error) {
+    console.error('Error updating password:', error);
+    res.status(500).json({ error: 'Error updating password' });
+  }
 });
 
 // Request password reset
-router.post('/password/reset-request', logActivity('user_request_password_reset'), (req, res) => {
+router.post('/password/reset-request', logActivity('user_request_password_reset'), async (req, res) => {
+  try {
   const { email } = req.body;
   
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
   }
   
-  const db = new sqlite3.Database(DB_PATH);
-  
-  db.get(`SELECT id FROM users WHERE email = ?`, [email], (err, user) => {
-    if (err) {
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
-    }
+    const userResult = await query(`
+      SELECT id FROM users WHERE email = $1
+    `, [email]);
     
-    if (!user) {
-      db.close();
+    if (userResult.rows.length === 0) {
       // Don't reveal if email exists or not for security
       return res.json({ message: 'If the email exists, a reset link has been sent' });
     }
+    
+    const user = userResult.rows[0];
     
     // Generate reset token
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
     
-    db.run(`
+    await query(`
       INSERT INTO password_reset_tokens (user_id, token, expires_at)
-      VALUES (?, ?, ?)
-    `, [user.id, token, expiresAt], function(err) {
-      db.close();
-      
-      if (err) {
-        return res.status(500).json({ error: 'Error creating reset token' });
-      }
+      VALUES ($1, $2, $3)
+    `, [user.id, token, expiresAt]);
       
       // TODO: Send email with reset link
       // For now, just return success
@@ -309,236 +328,252 @@ router.post('/password/reset-request', logActivity('user_request_password_reset'
         // In development, return the token
         ...(process.env.NODE_ENV === 'development' && { reset_token: token })
       });
-    });
-  });
+  } catch (error) {
+    console.error('Error requesting password reset:', error);
+    res.status(500).json({ error: 'Error creating reset token' });
+  }
 });
 
 // ===== NOTIFICATIONS =====
 
 // Get user notifications
-router.get('/notifications', logActivity('user_view_notifications'), (req, res) => {
+router.get('/notifications', logActivity('user_view_notifications'), async (req, res) => {
+  try {
   const userId = req.user.id;
   const { limit = 50, offset = 0, unread_only = false } = req.query;
   
-  const db = new sqlite3.Database(DB_PATH);
-  
-  let query = `
+    let sql = `
     SELECT * FROM notifications 
-    WHERE user_id = ? AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+      WHERE user_id = $1 AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
   `;
+    const params = [userId];
+    let paramCount = 1;
   
   if (unread_only === 'true') {
-    query += ` AND read_status = 0`;
+      sql += ` AND read_status = false`;
   }
   
-  query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
-  
-  db.all(query, [userId, parseInt(limit), parseInt(offset)], (err, notifications) => {
-    db.close();
-    
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
+    sql += ` ORDER BY created_at DESC LIMIT $${++paramCount} OFFSET $${++paramCount}`;
+    params.push(parseInt(limit), parseInt(offset));
+
+    const result = await query(sql, params);
+    res.json({ notifications: result.rows });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ error: 'Database error' });
     }
-    
-    res.json({ notifications });
-  });
 });
 
 // Mark notification as read
-router.patch('/notifications/:notificationId/read', logActivity('user_mark_notification_read'), (req, res) => {
+router.put('/notifications/:id/read', logActivity('user_mark_notification_read'), async (req, res) => {
+  try {
   const userId = req.user.id;
-  const { notificationId } = req.params;
+    const { id } = req.params;
   
-  const db = new sqlite3.Database(DB_PATH);
-  
-  db.run(`
+    const result = await query(`
     UPDATE notifications 
-    SET read_status = 1 
-    WHERE id = ? AND user_id = ?
-  `, [notificationId, userId], function(err) {
-    db.close();
+      SET read_status = true 
+      WHERE id = $1 AND user_id = $2
+      RETURNING id
+    `, [id, userId]);
     
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (this.changes === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Notification not found' });
     }
     
     res.json({ message: 'Notification marked as read' });
-  });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ error: 'Error updating notification' });
+  }
 });
 
 // Mark all notifications as read
-router.patch('/notifications/read-all', logActivity('user_mark_all_notifications_read'), (req, res) => {
+router.put('/notifications/read-all', logActivity('user_mark_all_notifications_read'), async (req, res) => {
+  try {
   const userId = req.user.id;
   
-  const db = new sqlite3.Database(DB_PATH);
-  
-  db.run(`
+    await query(`
     UPDATE notifications 
-    SET read_status = 1 
-    WHERE user_id = ? AND read_status = 0
-  `, [userId], function(err) {
-    db.close();
+      SET read_status = true 
+      WHERE user_id = $1 AND read_status = false
+    `, [userId]);
+
+    res.json({ message: 'All notifications marked as read' });
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    res.status(500).json({ error: 'Error updating notifications' });
+  }
+});
+
+// Delete notification
+router.delete('/notifications/:id', logActivity('user_delete_notification'), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    const result = await query(`
+      DELETE FROM notifications 
+      WHERE id = $1 AND user_id = $2
+      RETURNING id
+    `, [id, userId]);
     
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Notification not found' });
     }
     
-    res.json({ 
-      message: 'All notifications marked as read',
-      updated_count: this.changes
-    });
-  });
+    res.json({ message: 'Notification deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    res.status(500).json({ error: 'Error deleting notification' });
+  }
 });
 
 // ===== ACCOUNT MANAGEMENT =====
 
 // Get account statistics
-router.get('/account/stats', logActivity('user_view_account_stats'), (req, res) => {
+router.get('/account/stats', logActivity('user_view_account_stats'), async (req, res) => {
+  try {
   const userId = req.user.id;
-  const db = new sqlite3.Database(DB_PATH);
   
   // Get conversation count
-  db.get(`SELECT COUNT(*) as conversation_count FROM conversations WHERE user_id = ?`, [userId], (err, convStats) => {
-    if (err) {
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
-    }
+    const convStatsResult = await query(`
+      SELECT COUNT(*) as conversation_count FROM conversations WHERE user_id = $1
+    `, [userId]);
     
     // Get message count
-    db.get(`
+    const msgStatsResult = await query(`
       SELECT COUNT(cm.id) as message_count 
       FROM conversation_messages cm
       JOIN conversations c ON cm.conversation_id = c.id
-      WHERE c.user_id = ?
-    `, [userId], (err, msgStats) => {
-      if (err) {
-        db.close();
-        return res.status(500).json({ error: 'Database error' });
-      }
+      WHERE c.user_id = $1
+    `, [userId]);
       
       // Get activity count (last 30 days)
-      db.get(`
+    const activityStatsResult = await query(`
         SELECT COUNT(*) as recent_activity_count
         FROM activity_logs 
-        WHERE user_id = ? AND created_at >= datetime('now', '-30 days')
-      `, [userId], (err, activityStats) => {
-        db.close();
-        
-        if (err) {
-          return res.status(500).json({ error: 'Database error' });
-        }
+      WHERE user_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '30 days'
+    `, [userId]);
+    
+    // Get user creation date for account age calculation
+    const userResult = await query(`
+      SELECT created_at FROM users WHERE id = $1
+    `, [userId]);
+    
+    const accountAgeMs = Date.now() - new Date(userResult.rows[0].created_at).getTime();
+    const accountAgeDays = Math.floor(accountAgeMs / (1000 * 60 * 60 * 24));
         
         res.json({
           stats: {
-            conversations: convStats.conversation_count,
-            messages: msgStats.message_count,
-            recent_activities: activityStats.recent_activity_count,
-            account_age_days: Math.floor((Date.now() - new Date(req.user.created_at).getTime()) / (1000 * 60 * 60 * 24))
-          }
-        });
-      });
+        conversations: convStatsResult.rows[0].conversation_count,
+        messages: msgStatsResult.rows[0].message_count,
+        recent_activities: activityStatsResult.rows[0].recent_activity_count,
+        account_age_days: accountAgeDays
+      }
     });
-  });
+  } catch (error) {
+    console.error('Error fetching account stats:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Export user data
-router.get('/account/export', logActivity('user_export_data'), (req, res) => {
+router.get('/account/export', logActivity('user_export_data'), async (req, res) => {
+  try {
   const userId = req.user.id;
-  const db = new sqlite3.Database(DB_PATH);
   
   const exportData = {};
   
   // Get user profile
-  db.get(`
+    const profileResult = await query(`
     SELECT u.*, p.* FROM users u
     LEFT JOIN user_profiles p ON u.id = p.user_id
-    WHERE u.id = ?
-  `, [userId], (err, profile) => {
-    if (err) {
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
-    }
+      WHERE u.id = $1
+    `, [userId]);
     
-    exportData.profile = profile;
+    exportData.profile = profileResult.rows[0];
     
-    // Get conversations
-    db.all(`
-      SELECT c.*, GROUP_CONCAT(cm.role || ': ' || cm.content, '\n---\n') as messages
+    // Get conversations with messages
+    const conversationsResult = await query(`
+      SELECT 
+        c.*,
+        ARRAY_AGG(
+          JSON_BUILD_OBJECT(
+            'role', cm.role,
+            'content', cm.content,
+            'created_at', cm.created_at
+          ) ORDER BY cm.created_at
+        ) as messages
       FROM conversations c
       LEFT JOIN conversation_messages cm ON c.id = cm.conversation_id
-      WHERE c.user_id = ?
+      WHERE c.user_id = $1
       GROUP BY c.id
-    `, [userId], (err, conversations) => {
-      if (err) {
-        db.close();
-        return res.status(500).json({ error: 'Database error' });
-      }
+    `, [userId]);
       
-      exportData.conversations = conversations;
+    exportData.conversations = conversationsResult.rows;
       
       // Get activity logs
-      db.all(`
+    const activitiesResult = await query(`
         SELECT * FROM activity_logs 
-        WHERE user_id = ?
+      WHERE user_id = $1
         ORDER BY created_at DESC
-      `, [userId], (err, activities) => {
-        db.close();
+    `, [userId]);
         
-        if (err) {
-          return res.status(500).json({ error: 'Database error' });
-        }
-        
-        exportData.activities = activities;
+    exportData.activities = activitiesResult.rows;
         exportData.exported_at = new Date().toISOString();
         
         res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="ontrack-data-export-${userId}-${Date.now()}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="lisa-data-export-${userId}-${Date.now()}.json"`);
         res.json(exportData);
-      });
-    });
-  });
+  } catch (error) {
+    console.error('Error exporting user data:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Delete account
 router.delete('/account', logActivity('user_delete_account'), async (req, res) => {
+  const client = await getClient();
+  
+  try {
   const userId = req.user.id;
   const { password } = req.body;
   
   if (!password) {
-    return res.status(400).json({ error: 'Password confirmation is required' });
+      return res.status(400).json({ error: 'Password confirmation required' });
   }
   
-  const db = new sqlite3.Database(DB_PATH);
-  
   // Verify password
-  db.get(`SELECT password_hash FROM users WHERE id = ?`, [userId], async (err, user) => {
-    if (err) {
-      db.close();
-      return res.status(500).json({ error: 'Database error' });
+    const userResult = await client.query(`
+      SELECT password_hash FROM users WHERE id = $1
+    `, [userId]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
     }
     
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
-    
+    const isValidPassword = await bcrypt.compare(password, userResult.rows[0].password_hash);
     if (!isValidPassword) {
-      db.close();
-      return res.status(400).json({ error: 'Password is incorrect' });
+      return res.status(401).json({ error: 'Password is incorrect' });
     }
     
-    // Delete user (CASCADE will handle related records)
-    db.run(`DELETE FROM users WHERE id = ?`, [userId], function(err) {
-      db.close();
+    await client.query('BEGIN');
+
+    // The CASCADE constraints will handle deleting related records
+    await client.query(`
+      DELETE FROM users WHERE id = $1
+    `, [userId]);
       
-      if (err) {
-        return res.status(500).json({ error: 'Error deleting account' });
-      }
-      
+    await client.query('COMMIT');
       res.json({ message: 'Account deleted successfully' });
-    });
-  });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting account:', error);
+    res.status(500).json({ error: 'Error deleting account' });
+  } finally {
+    client.release();
+  }
 });
 
 module.exports = router; 

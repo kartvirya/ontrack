@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Starting OnTrack Chatbot Application..."
+echo "🚀 Starting Lisa Chatbot Application..."
 
 # Function to kill background processes on script exit
 cleanup() {

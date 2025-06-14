@@ -1,7 +1,8 @@
 {
-  "name": "chatbot-frontend",
+  "name": "lisa-frontend",
   "version": "0.1.0",
   "private": true,
+  "description": "Lisa AI Frontend - Intelligent Train Maintenance Assistant UI",
   "dependencies": {
     "@radix-ui/react-scroll-area": "^1.2.3",
     "@testing-library/dom": "^10.4.0",
@@ -45,5 +46,6 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "keywords": ["lisa", "ai", "train", "maintenance", "assistant", "frontend", "react"]
 }

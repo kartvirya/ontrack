@@ -34,12 +34,12 @@ class EmailService {
     
     const emailContent = {
       to: email,
-      from: process.env.FROM_EMAIL || 'noreply@ontrack.com',
-      subject: 'OnTrack - Password Reset Request',
+      from: process.env.FROM_EMAIL || 'noreply@lisa.com',
+      subject: 'Lisa - Password Reset Request',
       html: `
         <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0;">OnTrack</h1>
+            <h1 style="color: white; margin: 0;">Lisa</h1>
             <p style="color: #f0f0f0; margin: 10px 0 0 0;">AI-Powered Train Maintenance Assistant</p>
           </div>
           
@@ -51,7 +51,7 @@ class EmailService {
             </p>
             
             <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
-              We received a request to reset your password for your OnTrack account. If you didn't make this request, you can safely ignore this email.
+              We received a request to reset your password for your Lisa account. If you didn't make this request, you can safely ignore this email.
             </p>
             
             <p style="color: #666; line-height: 1.6; margin-bottom: 30px;">
@@ -80,17 +80,17 @@ class EmailService {
             <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
             
             <p style="color: #999; font-size: 12px; text-align: center;">
-              This email was sent by OnTrack. If you have any questions, please contact our support team.
+              This email was sent by Lisa. If you have any questions, please contact our support team.
             </p>
           </div>
         </div>
       `,
       text: `
-        OnTrack - Password Reset Request
+        Lisa - Password Reset Request
         
         Hello ${username},
         
-        We received a request to reset your password for your OnTrack account. If you didn't make this request, you can safely ignore this email.
+        We received a request to reset your password for your Lisa account. If you didn't make this request, you can safely ignore this email.
         
         To reset your password, visit this link: ${resetLink}
         
@@ -128,12 +128,12 @@ class EmailService {
   async sendWelcomeEmail(email, username) {
     const emailContent = {
       to: email,
-      from: process.env.FROM_EMAIL || 'noreply@ontrack.com',
-      subject: 'Welcome to OnTrack!',
+      from: process.env.FROM_EMAIL || 'noreply@lisa.com',
+      subject: 'Welcome to Lisa!',
       html: `
         <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0;">Welcome to OnTrack!</h1>
+            <h1 style="color: white; margin: 0;">Welcome to Lisa!</h1>
             <p style="color: #f0f0f0; margin: 10px 0 0 0;">AI-Powered Train Maintenance Assistant</p>
           </div>
           
@@ -141,11 +141,11 @@ class EmailService {
             <h2 style="color: #333; margin-bottom: 20px;">Welcome aboard, ${username}!</h2>
             
             <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
-              Thank you for joining OnTrack. Your account has been successfully created and your personal AI assistant has been provisioned.
+              Thank you for joining Lisa. Your account has been successfully created and your personal AI assistant has been provisioned.
             </p>
             
             <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
-              With OnTrack, you can:
+              With Lisa, you can:
             </p>
             
             <ul style="color: #666; line-height: 1.8; margin-bottom: 30px;">
@@ -159,26 +159,26 @@ class EmailService {
             <div style="text-align: center; margin-bottom: 30px;">
               <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}" 
                  style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                Start Using OnTrack
+                Start Using Lisa
               </a>
             </div>
             
             <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
             
             <p style="color: #999; font-size: 12px; text-align: center;">
-              This email was sent by OnTrack. If you have any questions, please contact our support team.
+              This email was sent by Lisa. If you have any questions, please contact our support team.
             </p>
           </div>
         </div>
       `,
       text: `
-        Welcome to OnTrack!
+        Welcome to Lisa!
         
-        Thank you for joining OnTrack, ${username}. Your account has been successfully created and your personal AI assistant has been provisioned.
+        Thank you for joining Lisa, ${username}. Your account has been successfully created and your personal AI assistant has been provisioned.
         
-        With OnTrack, you can get intelligent assistance for train maintenance, access technical documentation, identify components, and much more.
+        With Lisa, you can get intelligent assistance for train maintenance, access technical documentation, identify components, and much more.
         
-        Start using OnTrack at: ${process.env.FRONTEND_URL || 'http://localhost:3000'}
+        Start using Lisa at: ${process.env.FRONTEND_URL || 'http://localhost:3000'}
       `
     };
 

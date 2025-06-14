@@ -1,0 +1,70 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: lisa-database
+    env: docker
+    plan: free
+    dockerCommand: postgres
+    disk:
+      name: lisa-db-disk
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 1
+    envVars:
+      - key: POSTGRES_DB
+        value: lisa_db
+      - key: POSTGRES_USER
+        value: lisa_user
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+
+  # Backend API Service
+  - type: web
+    name: lisa-backend
+    env: node
+    plan: free
+    buildCommand: cd server/chatbot-backend && npm install
+    startCommand: cd server/chatbot-backend && node init-server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lisa-database
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ASSISTANT_ID
+        sync: false
+      - key: FRONTEND_URL
+        value: https://lisa-frontend.onrender.com
+      - key: CORS_ORIGIN
+        value: https://lisa-frontend.onrender.com
+
+  # Frontend Static Site
+  - type: web
+    name: lisa-frontend
+    env: static
+    plan: free
+    buildCommand: cd client/chatbot-frontend-2 && npm install && npm run build
+    staticPublishPath: client/chatbot-frontend-2/build
+    buildFilter:
+      paths:
+        - client/chatbot-frontend-2/**
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://lisa-backend.onrender.com
+      - key: REACT_APP_ENVIRONMENT
+        value: production
+
+databases:
+  - name: lisa-database
+    databaseName: lisa_db
+    user: lisa_user
+    plan: free 

@@ -62,8 +62,8 @@ const ImageModal = ({ imageUrl, title, onClose }) => {
             className="max-w-full max-h-[70vh] object-contain"
             onError={(e) => {
               e.target.onerror = null;
-              e.target.src = "/fallback-image.jpg"; // Provide a fallback image
-              alert("There was an error loading the image");
+              e.target.src = "/fallback-image.svg"; // Updated to use SVG fallback
+              console.error("Failed to load image:", imageUrl);
             }}
           />
         </div>

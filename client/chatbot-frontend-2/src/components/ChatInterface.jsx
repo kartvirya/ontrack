@@ -19,6 +19,16 @@ const ChatInterface = () => {
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
   const inputRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   // Save conversation to backend when messages change
   const saveConversation = useCallback(async () => {
@@ -76,7 +86,7 @@ const ChatInterface = () => {
     setThreadId(loadedThreadId);
     addNotification({
       type: 'success',
-      message: 'Conversation loaded successfully',
+      message: 'Chat loaded successfully! 💬',
       duration: 3000
     });
   };
@@ -110,6 +120,7 @@ const ChatInterface = () => {
     const userMessage = {
       role: 'user',
       content: input,
+      timestamp: new Date().toISOString()
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -142,12 +153,12 @@ const ChatInterface = () => {
       // Check if the response is a train part image
       if (data.isTrainPart && data.trainPart) {
         // Create message with train part information
-        // Remove description from the displayed message
         const assistantMessage = {
           role: 'assistant',
-          content: `Here's the ${data.trainPart.displayName}`, // Remove description
+          content: `Here's the ${data.trainPart.displayName}`,
           trainPart: data.trainPart,
-          assistantType: data.assistantType
+          assistantType: data.assistantType,
+          timestamp: new Date().toISOString()
         };
         
         setMessages(prev => [...prev, assistantMessage]);
@@ -156,7 +167,8 @@ const ChatInterface = () => {
         const assistantMessage = {
           role: 'assistant',
           content: data.message,
-          assistantType: data.assistantType
+          assistantType: data.assistantType,
+          timestamp: new Date().toISOString()
         };
         
         setMessages(prev => [...prev, assistantMessage]);
@@ -166,6 +178,7 @@ const ChatInterface = () => {
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: `Error: ${error.message}`,
+        timestamp: new Date().toISOString()
       }]);
     } finally {
       setIsLoading(false);
@@ -208,7 +221,7 @@ const ChatInterface = () => {
                 })}
                 onError={(e) => {
                   console.error('Image failed to load:', e);
-                  e.target.src = "/fallback-image.jpg"; // Provide a fallback image path
+                  e.target.src = "/fallback-image.svg";
                 }}
               />
               <div className="absolute bottom-2 right-2 bg-blue-500 text-white p-1 rounded-lg text-xs">
@@ -287,16 +300,18 @@ const ChatInterface = () => {
             </span>
           </div>
         )}
-        <div>{finalContent}</div>
+        <div className="whitespace-pre-wrap">{finalContent}</div>
       </div>
     );
   };
 
-  // Change from "bg-gray-50" to "bg-gray-100" to match darker gray 
-  const chatBackgroundClass = "bg-gray-100";
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-100">
       {/* Keyboard Shortcuts */}
       <KeyboardShortcuts 
         onToggleSidebar={toggleSidebar}
@@ -306,63 +321,69 @@ const ChatInterface = () => {
 
       {/* Chat History Sidebar */}
       {showSidebar && (
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          <ChatHistory 
-            onLoadConversation={handleLoadConversation}
-            onNewChat={handleNewChat}
+        <div className="w-80 bg-white border-r border-gray-200 flex flex-col shadow-lg">
+      <ChatHistory 
+        onLoadConversation={handleLoadConversation}
+        onNewChat={handleNewChat}
             onClose={() => toggleSidebar(false)}
           />
         </div>
       )}
 
-      {/* Main Chat Area */}
+        {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <button
+        <div className="bg-slate-100 backdrop-blur-sm border-b border-gray-100 px-6 py-4 flex items-center justify-between shadow-sm">
+          <div className="flex items-center space-x-4">
+                <button
               onClick={() => toggleSidebar()}
-              className={`p-2 rounded-md transition-colors relative ${
+              className={`p-2 rounded-xl transition-all duration-200 ${
                 isAuthenticated() 
-                  ? 'hover:bg-blue-50 text-blue-600 border border-blue-200' 
+                  ? 'hover:bg-blue-50 text-blue-600 border border-blue-200 shadow-sm' 
                   : 'hover:bg-gray-100 text-gray-600'
               }`}
-              title={isAuthenticated() ? "Chat History (Click to view saved conversations)" : "Sign in to access chat history"}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              {isAuthenticated() && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-              )}
-            </button>
-            <h1 className="text-xl font-semibold text-gray-900">OnTrack Assistant</h1>
-            {isAuthenticated() && !showSidebar && (
-              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                Click ☰ for chat history
-              </span>
-            )}
-          </div>
-          
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+            <div className="flex items-center space-x-3">
+              <div className="h-12 relative">
+                <img 
+                  src="/Lisa Logo.png" 
+                  alt="LISA" 
+                  className="h-full object-contain lisa-logo"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = '<span class="text-blue-600 font-bold text-sm">L</span>';
+                  }}
+                />
+              </div>
+              </div>
+            </div>
+            
           <div className="flex items-center space-x-3">
-            {isAuthenticated() ? (
+              {isAuthenticated() ? (
               <>
-                <span className="text-sm text-gray-600">
-                  Welcome, {user?.username}!
-                </span>
-                <button
+                <div className="flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-green-700 font-medium">
+                    {user?.username}
+                  </span>
+                </div>
+                        <button
                   onClick={() => navigate('/profile')}
-                  className="p-2 rounded-md hover:bg-gray-100 transition-colors"
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                   title="Profile"
-                >
+                        >
                   <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                </button>
+                        </button>
                 {isAdmin() && (
                   <button
                     onClick={() => navigate('/admin')}
-                    className="p-2 rounded-md hover:bg-gray-100 transition-colors"
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                     title="Admin Panel"
                   >
                     <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -371,112 +392,234 @@ const ChatInterface = () => {
                     </svg>
                   </button>
                 )}
-                <button
-                  onClick={logout}
-                  className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
-                  title="Logout"
-                >
-                  Logout
-                </button>
+                  <button
+                    onClick={logout}
+                  className="px-4 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium border border-red-200"
+                  >
+                    Logout
+                  </button>
               </>
-            ) : (
-              <button
+              ) : (
+                  <button
                 onClick={handleAuthClick}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                Sign In
-              </button>
-            )}
+                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 text-sm font-medium shadow-lg"
+                  >
+                    Sign In
+                  </button>
+              )}
+            </div>
           </div>
-        </div>
+          
+        {/* Messages Area */}
+        <div className="flex-1 overflow-auto bg-slate-100">
+          <div className="max-w-4xl mx-auto">
+              {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full py-20 px-6">
+                <div className="text-center space-y-6">
+                  {/* Welcome Icon */}
+                  <div className=" flex items-center justify-center h-24 relative">
+                    <img 
+                      src="/Lisa Logo.png" 
+                      alt="LISA" 
+                      className="h-full lisa-logo"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = '<span class="text-blue-600 font-bold text-2xl">L</span>';
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Welcome Message */}
+                  <div className="space-y-3">
+                    <h2 className="text-3xl font-bold text-gray-800">
+                      Welcome to LISA! 👋
+                    </h2>
+                    <p className="text-lg text-gray-600 max-w-2xl">
+                      Your AI assistant for train maintenance, technical support, and questions about train components, systems, and procedures.
+                    </p>
+                  </div>
 
-        <div className="flex-grow overflow-auto">
-          <div>
-            {messages.length === 0 && (
-              <div className="py-10 px-4 text-center text-gray-400">
-                <p className="text-lg mb-4">How can I help you today?</p>
-                {!isAuthenticated() ? (
-                  <div className="text-sm mt-2 space-y-2">
-                    <p>
-                      <button
-                        onClick={handleAuthClick}
-                        className="text-blue-600 hover:text-blue-700 underline"
-                      >
-                        Create an account
-                      </button>
-                      {' '}to get your personal AI assistant with enhanced capabilities and chat history.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="text-sm mt-4 space-y-3">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-800">
-                      <div className="flex items-center justify-center gap-2 mb-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                        <span className="font-medium">Chat History Available!</span>
+d
+
+                  {/* Auth Section */}
+                  {!isAuthenticated() ? (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mt-8 max-w-md mx-auto">
+                      <div className="text-center space-y-3">
+                        <h3 className="font-semibold text-blue-900">Get More Features</h3>
+                        <p className="text-sm text-blue-700">
+                          Sign in to access your personal AI assistant with enhanced capabilities and chat history.
+                        </p>
+                        <button
+                          onClick={handleAuthClick}
+                          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                        >
+                          Create Account / Sign In
+                        </button>
                       </div>
-                      <p>Click the menu button (☰) in the top-left to view your saved conversations</p>
                     </div>
-                    <p className="text-gray-500">
-                      You're logged in as <strong>{user?.username}</strong>. 
-                      All your conversations are automatically saved.
-                    </p>
+                  ) : (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-6 mt-8 max-w-md mx-auto">
+                      <div className="text-center space-y-2">
+                        <h3 className="font-semibold text-green-900">
+                          Welcome back, {user?.username}! 🎉
+                        </h3>
+                        <p className="text-sm text-green-700">
+                          Your conversations are automatically saved and you have access to enhanced features.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Suggested Questions */}
+                  <div className="mt-8 space-y-3">
+                    <p className="text-sm text-gray-500">Try asking me about:</p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {[
+                        "SD60M locomotive maintenance",
+                        "IETMS system troubleshooting", 
+                        "Train component inspection",
+                        "Safety procedures"
+                      ].map((suggestion, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setInput(suggestion)}
+                          className="px-3 py-1 bg-white border border-gray-200 rounded-full text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                </div>
+                </div>
+              )}
+
+            {/* Messages */}
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} mb-6 px-4`}
+              >
+                <div className={`flex max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start space-x-3`}>
+                  {/* Avatar */}
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                    message.role === 'user' 
+                      ? 'bg-blue-500 text-white ml-3' 
+                      : 'text-gray-600 mr-3'
+                  }`}>
+                    {message.role === 'user' ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    ) : (
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden lisa-logo-container">
+                        <img 
+                          src="/Lisa Logo.png" 
+                          alt="LISA" 
+                          className="w-5 h-5 object-contain lisa-logo"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = '<span class="text-blue-600 font-bold text-xs">L</span>';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Message Bubble */}
+                  <div className={`rounded-2xl px-4 py-3 shadow-sm ${
+                    message.role === 'user'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-white border border-gray-200 text-gray-800'
+                  }`}>
+                    <div className="space-y-2">
+                      {/* Message Content */}
+                      <div className={`${message.role === 'user' ? 'text-white' : 'text-gray-800'}`}>
+                    {renderMessageContent(message)}
+                      </div>
+                      
+                      {/* Timestamp */}
+                      <div className={`text-xs ${
+                        message.role === 'user' 
+                          ? 'text-blue-100' 
+                          : 'text-gray-400'
+                      } text-right`}>
+                        {formatTime(message.timestamp)}
+                      </div>
+                    </div>
+                  </div>
+                  </div>
+                </div>
+              ))}
+
+            {/* Loading Animation */}
+              {isLoading && (
+              <div className="flex justify-start mb-6 px-4">
+                <div className="flex items-start space-x-3 max-w-[80%]">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full lisa-logo-container flex items-center justify-center overflow-hidden">
+                    <img 
+                      src="/Lisa Logo.png" 
+                      alt="LISA" 
+                      className="w-5 h-5 object-contain lisa-logo"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = '<span class="text-blue-600 font-bold text-xs">L</span>';
+                      }}
+                    />
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {/* Scroll anchor */}
+            <div ref={messagesEndRef} />
+          </div>
+          </div>
+
+        {/* Input Area */}
+        <div className="border-t border-gray-200 bg-slate-200/95 backdrop-blur-sm p-4">
+          <div className="max-w-4xl mx-auto">
+            <form onSubmit={handleSubmit} className="flex gap-3">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Type your message..."
+                  className="w-full p-4 pr-12 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
+                  disabled={isLoading}
+                  ref={inputRef}
+                />
+                {input.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setInput('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 )}
               </div>
-            )}
-
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`py-6 px-4 text-black ${
-                  message.role === 'user' 
-                    ? 'bg-white' 
-                    : 'bg-gray-50'
-                }`}
-              >
-                <div className="container mx-auto max-w-3xl">
-                  {renderMessageContent(message)}
-                </div>
-              </div>
-            ))}
-
-            {isLoading && (
-              <div className="py-6 px-4 bg-gray-50 text-black">
-                <div className="container mx-auto max-w-3xl">
-                  <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="border-t p-4">
-          <div className="container mx-auto max-w-3xl">
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message..."
-                className="flex-grow p-3 border rounded-lg text-black"
-                disabled={isLoading}
-                ref={inputRef}
-              />
-              <LoadingButton
-                type="submit"
-                loading={isLoading}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                disabled={!input.trim()}
-              >
-                Send
-              </LoadingButton>
-            </form>
+                <LoadingButton
+                  type="submit"
+                  loading={isLoading}
+                className="px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg font-medium"
+                  disabled={!input.trim()}
+                >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                </LoadingButton>
+              </form>
           </div>
         </div>
       </div>
@@ -484,10 +627,10 @@ const ChatInterface = () => {
       {/* Image popup modal */}
       {imagePopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setImagePopup(null)}>
-          <div className="max-w-4xl max-h-[90vh] bg-white rounded-lg shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="max-w-4xl max-h-[90vh] bg-white rounded-xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900">{imagePopup.name}</h3>
-              <button
+              <h3 className="text-lg font-semibold text-gray-900">{imagePopup.title}</h3>
+              <button 
                 onClick={() => setImagePopup(null)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
@@ -497,10 +640,10 @@ const ChatInterface = () => {
               </button>
             </div>
             <div className="p-4">
-              <img
-                src={imagePopup.url}
-                alt={imagePopup.name}
-                className="max-w-full max-h-[70vh] object-contain mx-auto"
+              <img 
+                src={imagePopup.url} 
+                alt={imagePopup.title} 
+                className="max-w-full max-h-[70vh] object-contain mx-auto" 
               />
             </div>
           </div>

@@ -107,7 +107,7 @@ const AuthPage = () => {
         addNotification({
           type: 'success',
           title: 'Account created!',
-          message: 'Registration successful. Welcome to OnTrack!',
+          message: 'Registration successful. Welcome!',
           duration: 3000
         });
         navigate(from, { replace: true });
@@ -170,13 +170,13 @@ const AuthPage = () => {
   const getTitle = () => {
     switch (mode) {
       case 'login':
-        return 'Sign In to OnTrack';
+        return 'Sign In to LISA';
       case 'register':
-        return 'Create Your Account';
+        return 'Join LISA';
       case 'forgot-password':
-        return 'Reset Your Password';
+        return 'Reset Password';
       default:
-        return 'OnTrack Authentication';
+        return 'LISA Authentication';
     }
   };
 
@@ -185,17 +185,19 @@ const AuthPage = () => {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-6">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+          <div className=" h-20 rounded-full flex items-center justify-center mb-6 overflow-hidden bg-gray-100 shadow-lg border-2 border-gray-100">  
+            <img 
+              src="/Lisa Logo.png" 
+              alt="LISA" 
+              className="h-full object-contain"
+            />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
             {getTitle()}
           </h2>
           <p className="text-sm text-gray-600">
             {mode === 'login' && 'Welcome back! Please sign in to your account'}
-            {mode === 'register' && 'Join the OnTrack community today'}
+            {mode === 'register' && 'Join the community today'}
             {mode === 'forgot-password' && 'Enter your email to receive reset instructions'}
           </p>
         </div>
@@ -215,7 +217,7 @@ const AuthPage = () => {
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errors.email ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Enter your email"
@@ -238,7 +240,7 @@ const AuthPage = () => {
                   type="text"
                   value={formData.username}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errors.username ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Enter your username"
@@ -262,7 +264,7 @@ const AuthPage = () => {
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 pr-10 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    className={`w-full px-3 py-2 pr-10 border rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                       errors.password ? 'border-red-300' : 'border-gray-300'
                     }`}
                     placeholder="Enter your password"
@@ -300,7 +302,7 @@ const AuthPage = () => {
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 pr-10 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    className={`w-full px-3 py-2 pr-10 border rounded-md shadow-sm placeholder-gray-400 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                       errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
                     }`}
                     placeholder="Confirm your password"

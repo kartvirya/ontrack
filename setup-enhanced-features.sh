@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Setting up OnTrack Enhanced Features..."
+echo "🚀 Setting up Lisa Enhanced Features..."
 echo ""
 
 # Install backend dependencies

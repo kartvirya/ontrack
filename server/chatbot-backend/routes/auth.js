@@ -1,14 +1,13 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const { query, getClient } = require('../config/database');
 const { generateToken, logActivity, authenticateToken } = require('../middleware/auth');
-const { authLimiter, passwordResetLimiter } = require('../middleware/rateLimiter');
+const { authLimiter, passwordResetLimiter, resetRateLimit } = require('../middleware/rateLimiter');
 const emailService = require('../services/emailService');
 const OpenAIAgentManager = require('../services/openai-agent-manager');
+const crypto = require('crypto');
 
 const router = express.Router();
-const DB_PATH = path.join(__dirname, '..', 'database.sqlite');
 
 // User registration
 router.post('/register', authLimiter, logActivity('user_register'), async (req, res) => {
@@ -24,17 +23,12 @@ router.post('/register', authLimiter, logActivity('user_register'), async (req, 
       return res.status(400).json({ error: 'Password must be at least 6 characters long' });
     }
 
-    const db = new sqlite3.Database(DB_PATH);
-
     // Check if user already exists
-    db.get(`SELECT id FROM users WHERE username = ? OR email = ?`, [username, email], async (err, row) => {
-      if (err) {
-        db.close();
-        return res.status(500).json({ error: 'Database error' });
-      }
+    const existingUser = await query(`
+      SELECT id FROM users WHERE username = $1 OR email = $2
+    `, [username, email]);
 
-      if (row) {
-        db.close();
+    if (existingUser.rows.length > 0) {
         return res.status(400).json({ error: 'Username or email already exists' });
       }
 
@@ -42,90 +36,51 @@ router.post('/register', authLimiter, logActivity('user_register'), async (req, 
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Create user
-      db.run(`
+    const result = await query(`
         INSERT INTO users (username, email, password_hash, role, status)
-        VALUES (?, ?, ?, ?, ?)
-      `, [username, email, hashedPassword, 'user', 'active'], async function(err) {
-        if (err) {
-          db.close();
-          return res.status(500).json({ error: 'Error creating user' });
-        }
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id, username, email, role, status, created_at
+    `, [username, email, hashedPassword, 'user', 'active']);
 
-        const userId = this.lastID;
-        
-        try {
-          // Provision OpenAI agent for new user
-          console.log(`🚀 Provisioning agent for new user: ${username} (ID: ${userId})`);
+    const newUser = result.rows[0];
+    let agentInfo = null;
+
+    // Create OpenAI assistant for the user
+    try {
           const agentManager = new OpenAIAgentManager();
-          const agentSetup = await agentManager.provisionUserAgent(userId, username);
-          agentManager.close();
+      agentInfo = await agentManager.createUserAgent(newUser.id, username);
+    } catch (agentError) {
+      console.error('Failed to create OpenAI assistant:', agentError);
+      // Don't fail registration if agent creation fails
+    }
 
-          // Send welcome email
-          try {
-            await emailService.sendWelcomeEmail(email, username);
-          } catch (emailError) {
-            console.error('Failed to send welcome email:', emailError);
-            // Don't fail registration if email fails
-          }
+    // Send welcome email
+    try {
+      await emailService.sendWelcomeEmail(email, username);
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Don't fail registration if email fails
+    }
 
-          // Get the complete user data
-          db.get(`SELECT id, username, email, role, status FROM users WHERE id = ?`, [userId], (err, user) => {
-            db.close();
-            
-            if (err) {
-              return res.status(500).json({ error: 'Error retrieving user data' });
-            }
-
-            const token = generateToken(user);
+    // Generate token
+    const token = generateToken(newUser);
             
             res.status(201).json({
               message: 'User registered successfully',
               user: {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                role: user.role,
-                status: user.status
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        status: newUser.status
               },
-              token: token,
-              agentInfo: {
-                assistantId: agentSetup.assistant.id,
-                vectorStoreId: agentSetup.vectorStore.id
-              }
+      token,
+      agentInfo
             });
-          });
-        } catch (agentError) {
-          console.error('Error provisioning agent:', agentError);
-          
-          // Still return success for user creation, but note agent provisioning failed
-          db.get(`SELECT id, username, email, role, status FROM users WHERE id = ?`, [userId], (err, user) => {
-            db.close();
-            
-            if (err) {
-              return res.status(500).json({ error: 'Error retrieving user data' });
-            }
 
-            const token = generateToken(user);
-            
-            res.status(201).json({
-              message: 'User registered successfully, but agent provisioning failed',
-              user: {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                role: user.role,
-                status: user.status
-              },
-              token: token,
-              agentError: 'Agent provisioning failed - contact admin'
-            });
-          });
-        }
-      });
-    });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error during registration' });
   }
 });
 
@@ -138,44 +93,38 @@ router.post('/login', authLimiter, logActivity('user_login'), async (req, res) =
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    const db = new sqlite3.Database(DB_PATH);
-
-    db.get(`
+    // Find user
+    const result = await query(`
       SELECT id, username, email, password_hash, role, status, openai_assistant_id, vector_store_id
       FROM users 
-      WHERE username = ? OR email = ?
-    `, [username, username], async (err, user) => {
-      if (err) {
-        db.close();
-        return res.status(500).json({ error: 'Database error' });
-      }
+      WHERE username = $1 OR email = $1
+    `, [username]);
 
-      if (!user) {
-        db.close();
+    if (result.rows.length === 0) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
+    const user = result.rows[0];
+
+    // Check if user is active
       if (user.status !== 'active') {
-        db.close();
-        return res.status(403).json({ error: 'Account is suspended or inactive' });
+      return res.status(403).json({ error: 'Account is suspended' });
       }
 
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
-      
       if (!isValidPassword) {
-        db.close();
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       // Update last login
-      db.run(`UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?`, [user.id], (err) => {
-        db.close();
+    await query(`
+      UPDATE users 
+      SET last_login = CURRENT_TIMESTAMP 
+      WHERE id = $1
+    `, [user.id]);
         
-        if (err) {
-          console.error('Error updating last login:', err);
-        }
-
+    // Generate token
         const token = generateToken(user);
         
         res.json({
@@ -188,82 +137,13 @@ router.post('/login', authLimiter, logActivity('user_login'), async (req, res) =
             status: user.status,
             hasAgent: !!(user.openai_assistant_id && user.vector_store_id)
           },
-          token: token
-        });
-      });
+      token
     });
+
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error during login' });
   }
-});
-
-// Provision agent for existing user (admin only)
-router.post('/provision-agent/:userId', logActivity('provision_agent'), async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    const db = new sqlite3.Database(DB_PATH);
-    
-    // Get user info
-    db.get(`SELECT id, username, openai_assistant_id FROM users WHERE id = ?`, [userId], async (err, user) => {
-      db.close();
-      
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      
-      if (user.openai_assistant_id) {
-        return res.status(400).json({ error: 'User already has an agent' });
-      }
-      
-      try {
-        const agentManager = new OpenAIAgentManager();
-        const agentSetup = await agentManager.provisionUserAgent(userId, user.username);
-        agentManager.close();
-        
-        res.json({
-          message: 'Agent provisioned successfully',
-          agentInfo: {
-            assistantId: agentSetup.assistant.id,
-            vectorStoreId: agentSetup.vectorStore.id
-          }
-        });
-      } catch (agentError) {
-        console.error('Error provisioning agent:', agentError);
-        res.status(500).json({ error: 'Failed to provision agent' });
-      }
-    });
-  } catch (error) {
-    console.error('Provision agent error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get current user info
-router.get('/me', authenticateToken, (req, res) => {
-  // The authenticateToken middleware adds the user to req.user
-  const user = req.user;
-  
-  res.json({
-    user: {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-      hasAgent: !!(user.openai_assistant_id && user.vector_store_id)
-    }
-  });
-});
-
-// User logout
-router.post('/logout', authenticateToken, logActivity('user_logout'), (req, res) => {
-  res.json({ message: 'Logout successful' });
 });
 
 // Forgot password
@@ -275,51 +155,41 @@ router.post('/forgot-password', passwordResetLimiter, logActivity('forgot_passwo
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    const db = new sqlite3.Database(DB_PATH);
+    // Find user
+    const result = await query(`
+      SELECT id, username, email 
+      FROM users 
+      WHERE email = $1 AND status = 'active'
+    `, [email]);
 
-    // Check if user exists
-    db.get(`SELECT id, username, email FROM users WHERE email = ?`, [email], async (err, user) => {
-      if (err) {
-        db.close();
-        return res.status(500).json({ error: 'Database error' });
-      }
+    if (result.rows.length === 0) {
+      // Don't reveal if email exists or not
+      return res.json({ message: 'If the email exists, a reset link has been sent' });
+    }
 
-      if (!user) {
-        db.close();
-        // Don't reveal if email exists or not for security
-        return res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
-      }
+    const user = result.rows[0];
+    
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
 
-      // Generate reset token (in production, use crypto.randomBytes)
-      const resetToken = require('crypto').randomBytes(32).toString('hex');
-      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+    // Store reset token
+    await query(`
+      UPDATE users 
+      SET reset_token = $1, reset_token_expiry = $2 
+      WHERE id = $3
+    `, [resetToken, resetTokenExpiry, user.id]);
 
-      // Store reset token in database
-      db.run(`
-        UPDATE users 
-        SET reset_token = ?, reset_token_expiry = ? 
-        WHERE id = ?
-      `, [resetToken, resetTokenExpiry.toISOString(), user.id], async (err) => {
-        db.close();
-        
-        if (err) {
-          console.error('Error storing reset token:', err);
-          return res.status(500).json({ error: 'Error processing password reset' });
-        }
+    // Send reset email
+    try {
+      await emailService.sendPasswordResetEmail(user.email, user.username, resetToken);
+    } catch (emailError) {
+      console.error('Failed to send reset email:', emailError);
+      return res.status(500).json({ error: 'Failed to send reset email' });
+    }
 
-        try {
-          // Send password reset email
-          await emailService.sendPasswordResetEmail(email, resetToken, user.username);
-          
-          res.json({ 
-            message: 'If an account with that email exists, a password reset link has been sent.'
-          });
-        } catch (emailError) {
-          console.error('Error sending password reset email:', emailError);
-          res.status(500).json({ error: 'Error sending password reset email' });
-        }
-      });
-    });
+    res.json({ message: 'If the email exists, a reset link has been sent' });
+
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -337,48 +207,147 @@ router.post('/reset-password', passwordResetLimiter, logActivity('reset_password
 
     if (newPassword.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters long' });
-    }
-
-    const db = new sqlite3.Database(DB_PATH);
-
+      }
+      
     // Find user with valid reset token
-    db.get(`
+    const result = await query(`
       SELECT id, username, email 
       FROM users 
-      WHERE reset_token = ? AND reset_token_expiry > datetime('now')
-    `, [token], async (err, user) => {
-      if (err) {
-        db.close();
-        return res.status(500).json({ error: 'Database error' });
+      WHERE reset_token = $1 AND reset_token_expiry > CURRENT_TIMESTAMP AND status = 'active'
+    `, [token]);
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
       }
+      
+    const user = result.rows[0];
 
-      if (!user) {
-        db.close();
-        return res.status(400).json({ error: 'Invalid or expired reset token' });
-      }
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-      // Hash new password
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-      // Update password and clear reset token
-      db.run(`
-        UPDATE users 
-        SET password_hash = ?, reset_token = NULL, reset_token_expiry = NULL 
-        WHERE id = ?
-      `, [hashedPassword, user.id], (err) => {
-        db.close();
+    // Update password and clear reset token
+    await query(`
+      UPDATE users 
+      SET password_hash = $1, reset_token = NULL, reset_token_expiry = NULL 
+      WHERE id = $2
+    `, [hashedPassword, user.id]);
         
-        if (err) {
-          console.error('Error updating password:', err);
-          return res.status(500).json({ error: 'Error updating password' });
-        }
+    res.json({ message: 'Password reset successful' });
 
-        res.json({ message: 'Password reset successful' });
-      });
-    });
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ error: 'Internal server error' });
+          }
+        });
+
+// Logout (optional - mainly for session cleanup)
+router.post('/logout', authenticateToken, logActivity('user_logout'), async (req, res) => {
+  try {
+    // If using sessions, clean them up here
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token) {
+      await query(`
+        DELETE FROM user_sessions 
+        WHERE session_token = $1
+      `, [token]);
+    }
+
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Verify token (for frontend to check if token is still valid)
+router.get('/verify', authenticateToken, (req, res) => {
+  res.json({
+    message: 'Token is valid',
+    user: {
+      id: req.user.id,
+      username: req.user.username,
+      email: req.user.email,
+      role: req.user.role
+    }
+  });
+});
+
+// Change password (for authenticated users)
+router.post('/change-password', authenticateToken, logActivity('change_password'), async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+    }
+
+    // Get current password hash
+    const result = await query(`
+      SELECT password_hash 
+      FROM users 
+      WHERE id = $1
+    `, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0];
+
+    // Verify current password
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await query(`
+      UPDATE users 
+      SET password_hash = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+    `, [hashedPassword, userId]);
+
+    res.json({ message: 'Password changed successfully' });
+
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Development endpoint to reset rate limits (only available in development)
+router.post('/dev/reset-rate-limit', (req, res) => {
+  // Allow in development (when NODE_ENV is undefined or 'development')
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  try {
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    
+    // Reset rate limits for the client IP
+    resetRateLimit(authLimiter, clientIP);
+    resetRateLimit(passwordResetLimiter, clientIP);
+    
+    res.json({ 
+      message: 'Rate limits reset successfully',
+      ip: clientIP,
+      env: process.env.NODE_ENV || 'development',
+      note: 'This endpoint is only available in development mode'
+    });
+  } catch (error) {
+    console.error('Error resetting rate limits:', error);
+    res.status(500).json({ error: 'Failed to reset rate limits' });
   }
 });
 

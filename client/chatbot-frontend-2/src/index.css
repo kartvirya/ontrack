@@ -19,6 +19,27 @@ code {
     monospace;
 }
 
+/* LISA Logo Styles */
+.lisa-logo {
+  transition: opacity 0.3s ease-in-out;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.lisa-logo:hover {
+  opacity: 0.8;
+}
+
+/* Ensure logo loads smoothly */
+.lisa-logo-container {
+  transition: all 0.3s ease;
+}
+
+.lisa-logo-container:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
 /* Custom scrollbar */
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;

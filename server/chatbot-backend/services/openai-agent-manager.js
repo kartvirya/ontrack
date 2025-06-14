@@ -1,16 +1,13 @@
 const OpenAI = require('openai');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const { query, getClient } = require('../config/database');
 const fs = require('fs');
+const path = require('path');
 
 class OpenAIAgentManager {
   constructor() {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
-    
-    this.dbPath = path.join(__dirname, '..', 'database.sqlite');
-    this.db = new sqlite3.Database(this.dbPath);
     
     // Default instructions template for new agents
     this.defaultInstructions = `You are Lisa, an expert AI assistant for train maintenance and technical support. You specialize in:
@@ -37,324 +34,244 @@ Be helpful, professional, and safety-conscious in all responses. When showing im
 This is a personalized assistant for user ID: {USER_ID}. Maintain conversation context and provide personalized assistance.`;
   }
 
-  // Create a new vector store for a user
-  async createVectorStore(userId, userName) {
+  // Create vector store with uploaded files
+  async createVectorStoreWithFiles(files = null, name = "Lisa Train Maintenance Knowledge Base", description = "") {
     try {
-      console.log(`📚 Creating vector store for user ${userId}...`);
+      console.log('📁 Creating vector store...');
       
+      // Create vector store
       const vectorStore = await this.openai.beta.vectorStores.create({
-        name: `OnTrack-User-${userId}-${userName}`,
+        name: name,
         expires_after: {
           anchor: "last_active_at",
-          days: 365 // Store expires after 1 year of inactivity
+          days: 90
         }
       });
-
-      // Save to database
-      await this.saveVectorStore(userId, vectorStore.id, vectorStore.name);
       
       console.log(`✅ Vector store created: ${vectorStore.id}`);
-      return vectorStore;
+
+      let uploadedFiles = [];
+
+      // If specific files are provided, upload them
+      if (files && files.length > 0) {
+        console.log(`📄 Uploading ${files.length} provided files`);
+        
+        for (const file of files) {
+          try {
+            const fileStream = fs.createReadStream(file.path);
+            
+            const openaiFile = await this.openai.files.create({
+              file: fileStream,
+              purpose: 'assistants'
+            });
+
+            await this.openai.beta.vectorStores.files.create(vectorStore.id, {
+              file_id: openaiFile.id
+            });
+
+            uploadedFiles.push(file.originalname);
+            console.log(`✅ Uploaded: ${file.originalname}`);
+          } catch (fileError) {
+            console.error(`❌ Failed to upload ${file.originalname}:`, fileError.message);
+          }
+        }
+      } else {
+        // Fall back to uploads directory
+        const uploadsPath = path.join(__dirname, '..', 'uploads');
+        if (fs.existsSync(uploadsPath)) {
+          const files = fs.readdirSync(uploadsPath);
+          const supportedFiles = files.filter(file => {
+            const ext = path.extname(file).toLowerCase();
+            return ['.txt', '.md', '.pdf', '.doc', '.docx'].includes(ext);
+          });
+
+          console.log(`📄 Found ${supportedFiles.length} files in uploads directory`);
+
+          for (const fileName of supportedFiles) {
+            try {
+              const filePath = path.join(uploadsPath, fileName);
+              const fileStream = fs.createReadStream(filePath);
+              
+              const openaiFile = await this.openai.files.create({
+                file: fileStream,
+                purpose: 'assistants'
+              });
+
+              await this.openai.beta.vectorStores.files.create(vectorStore.id, {
+                file_id: openaiFile.id
+              });
+
+              uploadedFiles.push(fileName);
+              console.log(`✅ Uploaded: ${fileName}`);
+            } catch (fileError) {
+              console.error(`❌ Failed to upload ${fileName}:`, fileError.message);
+            }
+          }
+        }
+      }
+
+      return {
+        ...vectorStore,
+        uploadedFiles,
+        fileCount: uploadedFiles.length
+      };
     } catch (error) {
-      console.error('Error creating vector store:', error);
+      console.error('❌ Error creating vector store:', error);
       throw error;
     }
   }
 
-  // Create a new assistant for a user
-  async createAssistant(userId, userName, vectorStoreId = null) {
+  // Create shared assistant (not user-specific)
+  async createSharedAssistant(name, instructions, model = "gpt-4-1106-preview", vectorStoreId = null) {
     try {
-      console.log(`🤖 Creating assistant for user ${userId}...`);
+      console.log('🤖 Creating shared OpenAI assistant...');
       
-      const instructions = this.defaultInstructions.replace('{USER_ID}', userId);
-      
-      const assistantConfig = {
-        name: `OnTrack-Assistant-User-${userId}`,
+      const assistant = await this.openai.beta.assistants.create({
+        name: name,
         instructions: instructions,
+        model: model,
         tools: [
-          { type: "code_interpreter" },
-          { type: "file_search" }
+          { type: "file_search" },
+          { type: "code_interpreter" }
         ],
-        model: "gpt-4-1106-preview"
-      };
-
-      // Add vector store if provided
-      if (vectorStoreId) {
-        assistantConfig.tool_resources = {
+        tool_resources: {
           file_search: {
-            vector_store_ids: [vectorStoreId]
+            vector_store_ids: vectorStoreId ? [vectorStoreId] : []
           }
-        };
-      }
+        }
+      });
 
-      const assistant = await this.openai.beta.assistants.create(assistantConfig);
+      console.log(`✅ Shared assistant created: ${assistant.id}`);
+      return assistant;
+    } catch (error) {
+      console.error('❌ Error creating shared assistant:', error);
+      throw error;
+    }
+  }
 
-      // Save to database
-      await this.saveAssistant(userId, assistant.id, assistant.name, instructions, vectorStoreId);
+  // Create assistant with vector store
+  async createAssistant(vectorStoreId, instructions, userId) {
+    try {
+      console.log('🤖 Creating OpenAI assistant...');
       
+      const personalizedInstructions = instructions.replace('{USER_ID}', userId);
+      
+      const assistant = await this.openai.beta.assistants.create({
+        name: `Lisa Assistant - User ${userId}`,
+        instructions: personalizedInstructions,
+        model: "gpt-4-1106-preview",
+        tools: [
+          { type: "file_search" },
+          { type: "code_interpreter" }
+        ],
+        tool_resources: {
+          file_search: {
+            vector_store_ids: vectorStoreId ? [vectorStoreId] : []
+          }
+        }
+      });
+
       console.log(`✅ Assistant created: ${assistant.id}`);
       return assistant;
     } catch (error) {
-      console.error('Error creating assistant:', error);
+      console.error('❌ Error creating assistant:', error);
       throw error;
     }
   }
 
-  // Provision complete agent setup for new user
-  async provisionUserAgent(userId, userName) {
+  // Create user agent (assistant + vector store)
+  async createUserAgent(userId, username) {
     try {
-      console.log(`🚀 Provisioning complete agent setup for user ${userId}...`);
-      
-      // Create vector store first
-      const vectorStore = await this.createVectorStore(userId, userName);
-      
-      // Create assistant with vector store
-      const assistant = await this.createAssistant(userId, userName, vectorStore.id);
-      
-      // Update user record with agent IDs
-      await this.updateUserAgentIds(userId, assistant.id, vectorStore.id);
-      
-      console.log(`✅ Agent provisioning complete for user ${userId}`);
-      return {
-        assistant: assistant,
-        vectorStore: vectorStore
-      };
-    } catch (error) {
-      console.error('Error provisioning user agent:', error);
-      throw error;
-    }
-  }
+      console.log(`🚀 Creating agent for user: ${username} (ID: ${userId})`);
 
-  // Update instructions for all user assistants
-  async updateAllAssistantInstructions(newInstructions) {
-    try {
-      console.log('🔄 Updating instructions for all assistants...');
-      
-      const assistants = await this.getAllAssistants();
-      const updatePromises = [];
-      
-      for (const assistant of assistants) {
-        const personalizedInstructions = newInstructions.replace('{USER_ID}', assistant.user_id);
-        
-        updatePromises.push(
-          this.openai.beta.assistants.update(assistant.assistant_id, {
-            instructions: personalizedInstructions
-          }).then(() => {
-            // Update database
-            return this.updateAssistantInstructions(assistant.assistant_id, personalizedInstructions);
-          })
-        );
-      }
-      
-      await Promise.all(updatePromises);
-      console.log(`✅ Updated instructions for ${assistants.length} assistants`);
-      
-      return assistants.length;
-    } catch (error) {
-      console.error('Error updating assistant instructions:', error);
-      throw error;
-    }
-  }
+      // Create vector store with files
+      const vectorStore = await this.createVectorStoreWithFiles();
 
-  // Delete user's assistant and vector store
-  async deleteUserAgent(userId) {
-    try {
-      console.log(`🗑️ Deleting agent for user ${userId}...`);
-      
-      const user = await this.getUserAgentIds(userId);
-      
-      if (user.openai_assistant_id) {
-        await this.openai.beta.assistants.del(user.openai_assistant_id);
-        console.log(`✅ Deleted assistant: ${user.openai_assistant_id}`);
-      }
-      
-      if (user.vector_store_id) {
-        await this.openai.beta.vectorStores.del(user.vector_store_id);
-        console.log(`✅ Deleted vector store: ${user.vector_store_id}`);
-      }
-      
-      // Clean up database records
-      await this.cleanupUserAgentRecords(userId);
-      
-      console.log(`✅ Agent cleanup complete for user ${userId}`);
-    } catch (error) {
-      console.error('Error deleting user agent:', error);
-      throw error;
-    }
-  }
+      // Create assistant
+      const assistant = await this.createAssistant(
+        vectorStore.id, 
+        this.defaultInstructions, 
+        userId
+      );
 
-  // Database helper methods
-  saveVectorStore(userId, storeId, storeName) {
-    return new Promise((resolve, reject) => {
-      this.db.run(`
-        INSERT INTO vector_stores (user_id, store_id, store_name, description)
-        VALUES (?, ?, ?, ?)
-      `, [userId, storeId, storeName, `Vector store for user ${userId}`], function(err) {
-        if (err) reject(err);
-        else resolve(this.lastID);
-      });
-    });
-  }
+      // Save to database
+      await this.saveAssistant(userId, assistant.id, assistant.name, assistant.instructions, assistant.model, vectorStore.id);
+      await this.saveVectorStore(userId, vectorStore.id, vectorStore.name);
 
-  saveAssistant(userId, assistantId, assistantName, instructions, vectorStoreId) {
-    return new Promise((resolve, reject) => {
-      this.db.run(`
-        INSERT INTO openai_assistants (user_id, assistant_id, assistant_name, instructions, vector_store_id)
-        VALUES (?, ?, ?, ?, ?)
-      `, [userId, assistantId, assistantName, instructions, vectorStoreId], function(err) {
-        if (err) reject(err);
-        else resolve(this.lastID);
-      });
-    });
-  }
-
-  updateUserAgentIds(userId, assistantId, vectorStoreId) {
-    return new Promise((resolve, reject) => {
-      this.db.run(`
+      // Update user with assistant info
+      await query(`
         UPDATE users 
-        SET openai_assistant_id = ?, vector_store_id = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `, [assistantId, vectorStoreId, userId], function(err) {
-        if (err) reject(err);
-        else resolve(this.changes);
-      });
-    });
-  }
+        SET openai_assistant_id = $1, vector_store_id = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+      `, [assistant.id, vectorStore.id, userId]);
 
-  getAllAssistants() {
-    return new Promise((resolve, reject) => {
-      this.db.all(`
-        SELECT * FROM openai_assistants WHERE assistant_id IS NOT NULL
-      `, [], (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
-  }
-
-  getUserAgentIds(userId) {
-    return new Promise((resolve, reject) => {
-      this.db.get(`
-        SELECT openai_assistant_id, vector_store_id FROM users WHERE id = ?
-      `, [userId], (err, row) => {
-        if (err) reject(err);
-        else resolve(row || {});
-      });
-    });
-  }
-
-  updateAssistantInstructions(assistantId, instructions) {
-    return new Promise((resolve, reject) => {
-      this.db.run(`
-        UPDATE openai_assistants 
-        SET instructions = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE assistant_id = ?
-      `, [instructions, assistantId], function(err) {
-        if (err) reject(err);
-        else resolve(this.changes);
-      });
-    });
-  }
-
-  cleanupUserAgentRecords(userId) {
-    return new Promise((resolve, reject) => {
-      this.db.serialize(() => {
-        this.db.run(`DELETE FROM openai_assistants WHERE user_id = ?`, [userId]);
-        this.db.run(`DELETE FROM vector_stores WHERE user_id = ?`, [userId]);
-        this.db.run(`
-          UPDATE users 
-          SET openai_assistant_id = NULL, vector_store_id = NULL, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ?
-        `, [userId], function(err) {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-    });
-  }
-
-  // Close database connection
-  close() {
-    this.db.close();
-  }
-
-  // Create a new assistant (standalone, not tied to a specific user)
-  async createAssistant({ name, instructions, model = 'gpt-4-1106-preview', vectorStoreId }) {
-    try {
-      console.log(`🤖 Creating standalone assistant: ${name}...`);
+      console.log(`✅ Agent setup complete for user ${username}`);
       
-      const assistantConfig = {
-        name: name,
-        instructions: instructions || this.defaultInstructions,
-        tools: [
-          { type: "code_interpreter" },
-          { type: "file_search" }
-        ],
-        model: model
+      return {
+        assistant,
+        vectorStore
       };
-
-      // Add vector store if provided
-      if (vectorStoreId) {
-        assistantConfig.tool_resources = {
-          file_search: {
-            vector_store_ids: [vectorStoreId]
-          }
-        };
-      }
-
-      const assistant = await this.openai.beta.assistants.create(assistantConfig);
-      
-      console.log(`✅ Standalone assistant created: ${assistant.id}`);
-      return assistant;
     } catch (error) {
-      console.error('Error creating standalone assistant:', error);
+      console.error(`❌ Error creating agent for user ${username}:`, error);
       throw error;
     }
   }
 
-  // Update an existing assistant
-  async updateAssistant(assistantId, { name, instructions, model, vectorStoreId }) {
+  // Get user's assistant
+  async getUserAssistant(userId) {
     try {
-      console.log(`🔄 Updating assistant: ${assistantId}...`);
-      
-      const updateData = {};
-      
-      if (name) updateData.name = name;
-      if (instructions) updateData.instructions = instructions;
-      if (model) updateData.model = model;
-      
-      if (vectorStoreId !== undefined) {
-        if (vectorStoreId) {
-          updateData.tool_resources = {
-            file_search: {
-              vector_store_ids: [vectorStoreId]
-            }
-          };
-        } else {
-          updateData.tool_resources = {
-            file_search: {
-              vector_store_ids: []
-            }
-          };
-        }
+      const result = await query(`
+        SELECT openai_assistant_id, vector_store_id 
+        FROM users 
+        WHERE id = $1
+      `, [userId]);
+
+      if (result.rows.length === 0 || !result.rows[0].openai_assistant_id) {
+        return null;
       }
 
-      const assistant = await this.openai.beta.assistants.update(assistantId, updateData);
+      const user = result.rows[0];
       
-      console.log(`✅ Assistant updated: ${assistantId}`);
+      // Get assistant from OpenAI
+      const assistant = await this.openai.beta.assistants.retrieve(user.openai_assistant_id);
+      
+      return {
+        assistant,
+        vectorStoreId: user.vector_store_id
+      };
+    } catch (error) {
+      console.error('Error getting user assistant:', error);
+      return null;
+    }
+  }
+
+  // Update assistant
+  async updateAssistant(assistantId, updates) {
+    try {
+      console.log('🔄 Updating OpenAI assistant:', assistantId);
+      console.log('Update data:', updates);
+      
+      const assistant = await this.openai.beta.assistants.update(assistantId, updates);
+      
+      console.log('✅ Assistant updated in OpenAI successfully');
       return assistant;
     } catch (error) {
-      console.error('Error updating assistant:', error);
+      console.error('❌ Error updating assistant in OpenAI:', error);
       throw error;
     }
   }
 
-  // Delete an assistant
+  // Delete assistant
   async deleteAssistant(assistantId) {
     try {
-      console.log(`🗑️ Deleting assistant: ${assistantId}...`);
-      
+      // Delete from OpenAI
       await this.openai.beta.assistants.del(assistantId);
+      
+      // Delete from database
+      await query(`
+        DELETE FROM openai_assistants 
+        WHERE assistant_id = $1
+      `, [assistantId]);
       
       console.log(`✅ Assistant deleted: ${assistantId}`);
     } catch (error) {
@@ -363,50 +280,78 @@ This is a personalized assistant for user ID: {USER_ID}. Maintain conversation c
     }
   }
 
-  // Create a new vector store (standalone)
-  async createVectorStore({ name, description, files }) {
+  // Database helper methods
+  async saveAssistant(userId, assistantId, assistantName, instructions, model, vectorStoreId) {
     try {
-      console.log(`📚 Creating standalone vector store: ${name}...`);
-      
-      const vectorStore = await this.openai.beta.vectorStores.create({
-        name: name,
-        expires_after: {
-          anchor: "last_active_at",
-          days: 365 // Store expires after 1 year of inactivity
-        }
-      });
-
-      // Upload files if provided
-      if (files && files.length > 0) {
-        console.log(`📁 Uploading ${files.length} files to vector store...`);
-        
-        const fileStreams = files.map(file => fs.createReadStream(file.path));
-        
-        await this.openai.beta.vectorStores.fileBatches.uploadAndPoll(vectorStore.id, {
-          files: fileStreams
-        });
-        
-        console.log(`✅ Files uploaded to vector store: ${vectorStore.id}`);
-      }
-      
-      console.log(`✅ Vector store created: ${vectorStore.id}`);
-      return vectorStore;
+      await query(`
+        INSERT INTO openai_assistants 
+        (user_id, assistant_id, assistant_name, instructions, model, vector_store_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (assistant_id) 
+        DO UPDATE SET 
+          assistant_name = EXCLUDED.assistant_name,
+          instructions = EXCLUDED.instructions,
+          model = EXCLUDED.model,
+          vector_store_id = EXCLUDED.vector_store_id,
+          updated_at = CURRENT_TIMESTAMP
+      `, [userId, assistantId, assistantName, instructions, model, vectorStoreId]);
     } catch (error) {
-      console.error('Error creating vector store:', error);
+      console.error('Error saving assistant to database:', error);
       throw error;
     }
   }
 
-  // Delete a vector store
-  async deleteVectorStore(vectorStoreId) {
+  async saveVectorStore(userId, storeId, storeName, description = "", fileCount = 0) {
     try {
-      console.log(`🗑️ Deleting vector store: ${vectorStoreId}...`);
-      
-      await this.openai.beta.vectorStores.del(vectorStoreId);
-      
-      console.log(`✅ Vector store deleted: ${vectorStoreId}`);
+      await query(`
+        INSERT INTO vector_stores 
+        (user_id, store_id, store_name, description, file_count)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (store_id) 
+        DO UPDATE SET 
+          store_name = EXCLUDED.store_name,
+          description = EXCLUDED.description,
+          file_count = EXCLUDED.file_count,
+          updated_at = CURRENT_TIMESTAMP
+      `, [userId, storeId, storeName, description, fileCount]);
     } catch (error) {
-      console.error('Error deleting vector store:', error);
+      console.error('Error saving vector store to database:', error);
+      throw error;
+    }
+  }
+
+  // Get all assistants (both shared and user-specific)
+  async getAllAssistants() {
+    try {
+      const result = await query(`
+        SELECT 
+          oa.*,
+          CASE WHEN oa.user_id IS NULL THEN 'shared' ELSE 'user-specific' END as assistant_type,
+          vs.store_name as vector_store_name,
+          (SELECT COUNT(*) FROM users WHERE openai_assistant_id = oa.assistant_id) as user_count
+        FROM openai_assistants oa
+        LEFT JOIN vector_stores vs ON oa.vector_store_id = vs.store_id
+        ORDER BY oa.created_at DESC
+      `);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting all assistants:', error);
+      throw error;
+    }
+  }
+
+  // Get all vector stores from database
+  async getAllVectorStores() {
+    try {
+      const result = await query(`
+        SELECT vs.*, u.username 
+        FROM vector_stores vs
+        LEFT JOIN users u ON vs.user_id = u.id
+        ORDER BY vs.created_at DESC
+      `);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting all vector stores:', error);
       throw error;
     }
   }

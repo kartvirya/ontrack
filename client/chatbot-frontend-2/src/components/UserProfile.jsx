@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { useNotifications } from './NotificationSystem';
 
 const UserProfile = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -13,46 +14,100 @@ const UserProfile = () => {
   const [success, setSuccess] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
-  const { getAuthHeaders, API_URL, user, logout } = useAuth();
+  const { getAuthHeaders, API_URL, user, logout, isAuthenticated } = useAuth();
+  const { addNotification } = useNotifications();
   const navigate = useNavigate();
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      navigate('/auth');
+      return;
+    }
+  }, [isAuthenticated, navigate]);
+
   const fetchUserData = useCallback(async () => {
+    if (!isAuthenticated()) return;
+    
     try {
       setLoading(true);
+      setError('');
       
-      const [profileRes, settingsRes, notificationsRes, statsRes] = await Promise.all([
-        fetch(`${API_URL}/api/user/profile`, { headers: getAuthHeaders() }),
-        fetch(`${API_URL}/api/user/settings`, { headers: getAuthHeaders() }),
-        fetch(`${API_URL}/api/user/notifications?limit=20`, { headers: getAuthHeaders() }),
-        fetch(`${API_URL}/api/user/account/stats`, { headers: getAuthHeaders() })
-      ]);
-
+      // Fetch profile data
+      const profileRes = await fetch(`${API_URL}/api/user/profile`, { 
+        headers: getAuthHeaders() 
+      });
+      
       if (profileRes.ok) {
         const profileData = await profileRes.json();
-        setProfile(profileData.profile);
+        // Extract the profile from the nested structure
+        setProfile(profileData.user?.profile || {});
+      } else {
+        console.warn('Profile fetch failed:', profileRes.status);
+        setProfile({});
       }
 
-      if (settingsRes.ok) {
-        const settingsData = await settingsRes.json();
-        setSettings(settingsData.settings);
+      // Fetch settings (optional)
+      try {
+        const settingsRes = await fetch(`${API_URL}/api/user/settings`, { 
+          headers: getAuthHeaders() 
+        });
+        if (settingsRes.ok) {
+          const settingsData = await settingsRes.json();
+          setSettings(settingsData.settings || {});
+        } else {
+          setSettings({});
+        }
+      } catch (err) {
+        console.warn('Settings fetch failed:', err);
+        setSettings({});
       }
 
-      if (notificationsRes.ok) {
-        const notificationsData = await notificationsRes.json();
-        setNotifications(notificationsData.notifications);
+      // Fetch notifications (optional)
+      try {
+        const notificationsRes = await fetch(`${API_URL}/api/user/notifications?limit=20`, { 
+          headers: getAuthHeaders() 
+        });
+        if (notificationsRes.ok) {
+          const notificationsData = await notificationsRes.json();
+          setNotifications(notificationsData.notifications || []);
+        } else {
+          setNotifications([]);
+        }
+      } catch (err) {
+        console.warn('Notifications fetch failed:', err);
+        setNotifications([]);
       }
 
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData.stats);
+      // Fetch stats (optional)
+      try {
+        const statsRes = await fetch(`${API_URL}/api/user/account/stats`, { 
+          headers: getAuthHeaders() 
+        });
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setStats(statsData.stats || {});
+        } else {
+          setStats({});
+        }
+      } catch (err) {
+        console.warn('Stats fetch failed:', err);
+        setStats({});
       }
+
     } catch (error) {
-      setError('Failed to load user data');
       console.error('Error fetching user data:', error);
+      setError('Failed to load profile data. Please try refreshing the page.');
+      addNotification({
+        type: 'error',
+        title: 'Profile Load Error',
+        message: 'Failed to load your profile data.',
+        duration: 5000
+      });
     } finally {
       setLoading(false);
     }
-  }, [API_URL, getAuthHeaders]);
+  }, [API_URL, getAuthHeaders, isAuthenticated, addNotification]);
 
   useEffect(() => {
     fetchUserData();
@@ -67,13 +122,18 @@ const UserProfile = () => {
     setSuccess('');
   };
 
+  if (!isAuthenticated()) {
+    return null; // Will redirect in useEffect
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="bg-white rounded-lg p-8 shadow-lg">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
           <div className="text-center">
-            <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            Loading profile...
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">Loading Profile</h3>
+            <p className="text-gray-600">Please wait while we fetch your data...</p>
           </div>
         </div>
       </div>
@@ -81,33 +141,45 @@ const UserProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-4">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center gap-6">
               <button
                 onClick={handleBackToChat}
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors"
+                className="flex items-center gap-3 text-blue-600 hover:text-blue-700 transition-all duration-200 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl border border-blue-200"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
                 Back to Chat
               </button>
-              <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    My Profile
+                  </h1>
+                  <p className="text-sm text-gray-600">Manage your account and preferences</p>
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <div className="text-sm font-medium text-gray-800">
-                  {user.username}
+                <div className="text-sm font-semibold text-gray-800">
+                  {user?.username || 'User'}
                 </div>
-                <div className="text-xs text-gray-600">User Account</div>
+                <div className="text-xs text-gray-500">Account Settings</div>
               </div>
               <button
                 onClick={logout}
-                className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+                className="px-4 py-2 text-sm bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium border border-red-200"
               >
                 Logout
               </button>
@@ -121,70 +193,128 @@ const UserProfile = () => {
         {(error || success) && (
           <div className="mb-6">
             {error && (
-              <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg mb-4 flex justify-between items-center">
-                <span>{error}</span>
-                <button onClick={clearMessages} className="text-red-500 hover:text-red-700">×</button>
+              <div className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl mb-4 flex justify-between items-center shadow-sm">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{error}</span>
+                </div>
+                <button onClick={clearMessages} className="text-red-500 hover:text-red-700 p-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             )}
             {success && (
-              <div className="p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg mb-4 flex justify-between items-center">
-                <span>{success}</span>
-                <button onClick={clearMessages} className="text-green-500 hover:text-green-700">×</button>
+              <div className="p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl mb-4 flex justify-between items-center shadow-sm">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{success}</span>
+                </div>
+                <button onClick={clearMessages} className="text-green-500 hover:text-green-700 p-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             )}
           </div>
         )}
 
         {/* Stats Overview */}
-        {stats && (
+        {stats && Object.keys(stats).length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-2xl font-bold text-blue-600">{stats.conversations}</div>
-              <div className="text-sm text-gray-600">Conversations</div>
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-blue-600">{stats.conversations || 0}</div>
+                  <div className="text-sm text-gray-600">Conversations</div>
+                </div>
+              </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-2xl font-bold text-green-600">{stats.messages}</div>
-              <div className="text-sm text-gray-600">Messages</div>
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-green-600">{stats.messages || 0}</div>
+                  <div className="text-sm text-gray-600">Messages</div>
+                </div>
+              </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-2xl font-bold text-purple-600">{stats.recent_activities}</div>
-              <div className="text-sm text-gray-600">Recent Activities</div>
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-purple-600">{stats.recent_activities || 0}</div>
+                  <div className="text-sm text-gray-600">Activities</div>
+                </div>
+              </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-2xl font-bold text-orange-600">{stats.account_age_days}</div>
-              <div className="text-sm text-gray-600">Days Active</div>
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-orange-600">{stats.account_age_days || 0}</div>
+                  <div className="text-sm text-gray-600">Days Active</div>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="bg-white rounded-lg shadow">
+        {/* Main Content */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
+          {/* Tabs */}
           <div className="border-b border-gray-200">
-            <nav className="flex">
+            <nav className="flex overflow-x-auto">
               {[
-                { id: 'profile', label: 'Profile' },
-                { id: 'settings', label: 'Settings' },
-                { id: 'notifications', label: `Notifications (${notifications.filter(n => !n.read_status).length})` },
-                { id: 'security', label: 'Security' },
-                { id: 'account', label: 'Account' }
+                { id: 'profile', label: 'Profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+                { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
+                { id: 'notifications', label: `Notifications${notifications.filter(n => !n.read_status).length > 0 ? ` (${notifications.filter(n => !n.read_status).length})` : ''}`, icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
+                { id: 'security', label: 'Security', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
+                { id: 'account', label: 'Account', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' }
               ].map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-6 text-sm font-medium ${
+                  className={`flex items-center gap-2 py-4 px-6 text-sm font-medium whitespace-nowrap transition-all duration-200 ${
                     activeTab === tab.id 
-                      ? 'border-b-2 border-blue-500 text-blue-600' 
-                      : 'text-gray-600 hover:text-gray-800'
+                      ? 'border-b-2 border-blue-500 text-blue-600 bg-blue-50/50' 
+                      : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                   }`}
                 >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
+                  </svg>
                   {tab.label}
                 </button>
               ))}
             </nav>
           </div>
 
-          {/* Content */}
-          <div className="p-6">
+          {/* Tab Content */}
+          <div className="p-8">
             {activeTab === 'profile' && (
               <ProfileTab 
                 profile={profile}
@@ -249,20 +379,40 @@ const UserProfile = () => {
 // Profile Tab Component
 const ProfileTab = ({ profile, setProfile, setSuccess, setError, getAuthHeaders, API_URL }) => {
   const [formData, setFormData] = useState({
-    first_name: profile?.first_name || '',
-    last_name: profile?.last_name || '',
+    firstName: profile?.firstName || '',
+    lastName: profile?.lastName || '',
     phone: profile?.phone || '',
     department: profile?.department || '',
-    job_title: profile?.job_title || '',
+    jobTitle: profile?.jobTitle || '',
     bio: profile?.bio || '',
     timezone: profile?.timezone || 'UTC',
     language: profile?.language || 'en',
-    date_format: profile?.date_format || 'MM/DD/YYYY'
+    dateFormat: profile?.dateFormat || 'MM/DD/YYYY'
   });
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Update form data when profile changes
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        phone: profile.phone || '',
+        department: profile.department || '',
+        jobTitle: profile.jobTitle || '',
+        bio: profile.bio || '',
+        timezone: profile.timezone || 'UTC',
+        language: profile.language || 'en',
+        dateFormat: profile.dateFormat || 'MM/DD/YYYY'
+      });
+    }
+  }, [profile]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
+    setError('');
     
     try {
       const response = await fetch(`${API_URL}/api/user/profile`, {
@@ -275,15 +425,17 @@ const ProfileTab = ({ profile, setProfile, setSuccess, setError, getAuthHeaders,
       });
 
       if (response.ok) {
-        setSuccess('Profile updated successfully');
+        setSuccess('Profile updated successfully! 🎉');
         setProfile({ ...profile, ...formData });
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to update profile');
       }
     } catch (error) {
-      setError('Failed to update profile');
+      setError('Failed to update profile. Please check your connection.');
       console.error('Profile update error:', error);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -291,7 +443,21 @@ const ProfileTab = ({ profile, setProfile, setSuccess, setError, getAuthHeaders,
     const file = e.target.files[0];
     if (!file) return;
 
+    // Validate file size (2MB limit)
+    if (file.size > 2 * 1024 * 1024) {
+      setError('File size must be less than 2MB');
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file');
+      return;
+    }
+
     setUploading(true);
+    setError('');
+    
     const formData = new FormData();
     formData.append('avatar', file);
 
@@ -304,14 +470,14 @@ const ProfileTab = ({ profile, setProfile, setSuccess, setError, getAuthHeaders,
 
       if (response.ok) {
         const data = await response.json();
-        setSuccess('Avatar uploaded successfully');
-        setProfile({ ...profile, avatar_url: data.avatar_url });
+        setSuccess('Avatar uploaded successfully! 📸');
+        setProfile({ ...profile, avatarUrl: data.avatar_url });
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to upload avatar');
       }
     } catch (error) {
-      setError('Failed to upload avatar');
+      setError('Failed to upload avatar. Please try again.');
       console.error('Avatar upload error:', error);
     } finally {
       setUploading(false);
@@ -319,130 +485,207 @@ const ProfileTab = ({ profile, setProfile, setSuccess, setError, getAuthHeaders,
   };
 
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-6">Profile Information</h3>
+    <div className="space-y-8">
+      <div>
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Profile Information</h3>
+        <p className="text-gray-600">Update your personal information and preferences.</p>
+      </div>
       
       {/* Avatar Section */}
-      <div className="mb-8 flex items-center gap-6">
-        <div className="relative">
-          <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-            {profile?.avatar_url ? (
-              <img 
-                src={`${API_URL}${profile.avatar_url}`} 
-                alt="Avatar" 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <svg className="w-12 h-12 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-              </svg>
+      <div className="bg-gray-50 rounded-2xl p-6">
+        <h4 className="text-lg font-semibold text-gray-900 mb-4">Profile Picture</h4>
+        <div className="flex items-center gap-6">
+          <div className="relative">
+            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
+              {profile?.avatarUrl ? (
+                <img 
+                  src={`${API_URL}${profile.avatarUrl}`} 
+                  alt="Profile Avatar" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <svg className="w-12 h-12 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
+              )}
+            </div>
+            {uploading && (
+              <div className="absolute inset-0 bg-black bg-opacity-50 rounded-2xl flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              </div>
             )}
           </div>
-          {uploading && (
-            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-              <div className="animate-spin w-6 h-6 border-2 border-white border-t-transparent rounded-full"></div>
-            </div>
-          )}
-        </div>
-        <div>
-          <label className="block">
-            <span className="sr-only">Choose avatar</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarUpload}
-              disabled={uploading}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-          </label>
-          <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 2MB</p>
+          <div className="flex-1">
+            <label className="block">
+              <span className="sr-only">Choose avatar</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                disabled={uploading}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:transition-colors disabled:opacity-50"
+              />
+            </label>
+            <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF up to 2MB. Recommended: 400x400px</p>
+          </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-            <input
-              type="text"
-              value={formData.first_name}
-              onChange={(e) => setFormData({...formData, first_name: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-            <input
-              type="text"
-              value={formData.last_name}
-              onChange={(e) => setFormData({...formData, last_name: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({...formData, phone: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-            <input
-              type="text"
-              value={formData.department}
-              onChange={(e) => setFormData({...formData, department: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
-            <input
-              type="text"
-              value={formData.job_title}
-              onChange={(e) => setFormData({...formData, job_title: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
-            <select
-              value={formData.timezone}
-              onChange={(e) => setFormData({...formData, timezone: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-            >
-              <option value="UTC">UTC</option>
-              <option value="America/New_York">Eastern Time</option>
-              <option value="America/Chicago">Central Time</option>
-              <option value="America/Denver">Mountain Time</option>
-              <option value="America/Los_Angeles">Pacific Time</option>
-            </select>
-          </div>
-        </div>
-        
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Basic Information */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-          <textarea
-            value={formData.bio}
-            onChange={(e) => setFormData({...formData, bio: e.target.value})}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 h-24"
-            placeholder="Tell us about yourself..."
-          />
+          <h4 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+              <input
+                type="text"
+                value={formData.firstName}
+                onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Enter your first name"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+              <input
+                type="text"
+                value={formData.lastName}
+                onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Enter your last name"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Enter your phone number"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+              <input
+                type="text"
+                value={formData.department}
+                onChange={(e) => setFormData({...formData, department: e.target.value})}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Enter your department"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Job Title</label>
+              <input
+                type="text"
+                value={formData.jobTitle}
+                onChange={(e) => setFormData({...formData, jobTitle: e.target.value})}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Enter your job title"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
+              <select
+                value={formData.timezone}
+                onChange={(e) => setFormData({...formData, timezone: e.target.value})}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                <option value="UTC">UTC (Coordinated Universal Time)</option>
+                <option value="America/New_York">Eastern Time (ET)</option>
+                <option value="America/Chicago">Central Time (CT)</option>
+                <option value="America/Denver">Mountain Time (MT)</option>
+                <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                <option value="Europe/London">London (GMT)</option>
+                <option value="Europe/Paris">Paris (CET)</option>
+                <option value="Asia/Tokyo">Tokyo (JST)</option>
+                <option value="Asia/Shanghai">Shanghai (CST)</option>
+                <option value="Australia/Sydney">Sydney (AEST)</option>
+              </select>
+            </div>
+          </div>
         </div>
         
-        <div className="flex justify-end">
+        {/* Bio Section */}
+        <div>
+          <h4 className="text-lg font-semibold text-gray-900 mb-4">About You</h4>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+            <textarea
+              value={formData.bio}
+              onChange={(e) => setFormData({...formData, bio: e.target.value})}
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 h-32 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-colors"
+              placeholder="Tell us about yourself, your role, and what you do..."
+              maxLength={500}
+            />
+            <p className="text-xs text-gray-500 mt-1">{formData.bio.length}/500 characters</p>
+          </div>
+        </div>
+        
+        {/* Preferences */}
+        <div>
+          <h4 className="text-lg font-semibold text-gray-900 mb-4">Preferences</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
+              <select
+                value={formData.language}
+                onChange={(e) => setFormData({...formData, language: e.target.value})}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="it">Italian</option>
+                <option value="pt">Portuguese</option>
+                <option value="zh">Chinese</option>
+                <option value="ja">Japanese</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Date Format</label>
+              <select
+                value={formData.dateFormat}
+                onChange={(e) => setFormData({...formData, dateFormat: e.target.value})}
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              >
+                <option value="MM/DD/YYYY">MM/DD/YYYY (US)</option>
+                <option value="DD/MM/YYYY">DD/MM/YYYY (EU)</option>
+                <option value="YYYY-MM-DD">YYYY-MM-DD (ISO)</option>
+                <option value="DD-MM-YYYY">DD-MM-YYYY</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex justify-end pt-6 border-t border-gray-200">
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            disabled={saving}
+            className="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-lg flex items-center gap-2"
           >
-            Save Profile
+            {saving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Save Profile
+              </>
+            )}
           </button>
         </div>
       </form>
@@ -464,9 +707,30 @@ const SettingsTab = ({ settings, setSettings, setSuccess, setError, getAuthHeade
     show_timestamps: settings?.show_timestamps ?? true,
     compact_mode: settings?.compact_mode ?? false
   });
+  const [saving, setSaving] = useState(false);
+
+  // Update form data when settings change
+  useEffect(() => {
+    if (settings) {
+      setFormData({
+        theme: settings.theme || 'light',
+        chat_sound_enabled: settings.chat_sound_enabled ?? true,
+        email_notifications: settings.email_notifications ?? true,
+        push_notifications: settings.push_notifications ?? true,
+        auto_save_conversations: settings.auto_save_conversations ?? true,
+        conversation_retention_days: settings.conversation_retention_days || 365,
+        default_assistant_model: settings.default_assistant_model || 'gpt-4-1106-preview',
+        sidebar_collapsed: settings.sidebar_collapsed ?? false,
+        show_timestamps: settings.show_timestamps ?? true,
+        compact_mode: settings.compact_mode ?? false
+      });
+    }
+  }, [settings]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
+    setError('');
     
     try {
       const response = await fetch(`${API_URL}/api/user/settings`, {
@@ -479,181 +743,264 @@ const SettingsTab = ({ settings, setSettings, setSuccess, setError, getAuthHeade
       });
 
       if (response.ok) {
-        setSuccess('Settings updated successfully');
+        setSuccess('Settings updated successfully! ⚙️');
         setSettings(formData);
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to update settings');
       }
     } catch (error) {
-      setError('Failed to update settings');
+      setError('Failed to update settings. Please check your connection.');
       console.error('Settings update error:', error);
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-6">Preferences & Settings</h3>
+    <div className="space-y-8">
+      <div>
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">Preferences & Settings</h3>
+        <p className="text-gray-600">Customize your experience and notification preferences.</p>
+      </div>
       
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Appearance */}
-        <div>
-          <h4 className="font-medium text-gray-900 mb-4">Appearance</h4>
-          <div className="space-y-4">
+        <div className="bg-gray-50 rounded-2xl p-6">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z" />
+            </svg>
+            Appearance
+          </h4>
+          <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
               <select
                 value={formData.theme}
                 onChange={(e) => setFormData({...formData, theme: e.target.value})}
-                className="w-full md:w-48 border border-gray-300 rounded-md px-3 py-2"
+                className="w-full md:w-64 border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               >
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-                <option value="auto">Auto (System)</option>
+                <option value="light">Light Theme</option>
+                <option value="dark">Dark Theme</option>
+                <option value="auto">Auto (Follow System)</option>
               </select>
             </div>
             
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="compact_mode"
-                checked={formData.compact_mode}
-                onChange={(e) => setFormData({...formData, compact_mode: e.target.checked})}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-              />
-              <label htmlFor="compact_mode" className="ml-2 text-sm text-gray-700">
-                Compact mode (smaller UI elements)
-              </label>
-            </div>
-            
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="show_timestamps"
-                checked={formData.show_timestamps}
-                onChange={(e) => setFormData({...formData, show_timestamps: e.target.checked})}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-              />
-              <label htmlFor="show_timestamps" className="ml-2 text-sm text-gray-700">
-                Show message timestamps
-              </label>
-            </div>
-            
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="sidebar_collapsed"
-                checked={formData.sidebar_collapsed}
-                onChange={(e) => setFormData({...formData, sidebar_collapsed: e.target.checked})}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-              />
-              <label htmlFor="sidebar_collapsed" className="ml-2 text-sm text-gray-700">
-                Start with sidebar collapsed
-              </label>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
+                <div className="flex-1">
+                  <label htmlFor="compact_mode" className="text-sm font-medium text-gray-700">
+                    Compact Mode
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">Use smaller UI elements to fit more content</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="compact_mode"
+                    checked={formData.compact_mode}
+                    onChange={(e) => setFormData({...formData, compact_mode: e.target.checked})}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
+                <div className="flex-1">
+                  <label htmlFor="show_timestamps" className="text-sm font-medium text-gray-700">
+                    Show Message Timestamps
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">Display when each message was sent</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="show_timestamps"
+                    checked={formData.show_timestamps}
+                    onChange={(e) => setFormData({...formData, show_timestamps: e.target.checked})}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
+                <div className="flex-1">
+                  <label htmlFor="sidebar_collapsed" className="text-sm font-medium text-gray-700">
+                    Start with Sidebar Collapsed
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">Hide the chat history sidebar by default</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="sidebar_collapsed"
+                    checked={formData.sidebar_collapsed}
+                    onChange={(e) => setFormData({...formData, sidebar_collapsed: e.target.checked})}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Chat Settings */}
-        <div>
-          <h4 className="font-medium text-gray-900 mb-4">Chat Settings</h4>
-          <div className="space-y-4">
+        <div className="bg-gray-50 rounded-2xl p-6">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Chat Settings
+          </h4>
+          <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Default Assistant Model</label>
               <select
                 value={formData.default_assistant_model}
                 onChange={(e) => setFormData({...formData, default_assistant_model: e.target.value})}
-                className="w-full md:w-64 border border-gray-300 rounded-md px-3 py-2"
+                className="w-full md:w-80 border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               >
-                <option value="gpt-4-1106-preview">GPT-4 Turbo</option>
-                <option value="gpt-4">GPT-4</option>
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                <option value="gpt-4-1106-preview">GPT-4 Turbo (Recommended)</option>
+                <option value="gpt-4">GPT-4 (Standard)</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Faster)</option>
               </select>
+              <p className="text-xs text-gray-500 mt-1">Choose the AI model that best fits your needs</p>
             </div>
             
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="chat_sound_enabled"
-                checked={formData.chat_sound_enabled}
-                onChange={(e) => setFormData({...formData, chat_sound_enabled: e.target.checked})}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-              />
-              <label htmlFor="chat_sound_enabled" className="ml-2 text-sm text-gray-700">
-                Enable chat sounds
-              </label>
-            </div>
-            
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="auto_save_conversations"
-                checked={formData.auto_save_conversations}
-                onChange={(e) => setFormData({...formData, auto_save_conversations: e.target.checked})}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-              />
-              <label htmlFor="auto_save_conversations" className="ml-2 text-sm text-gray-700">
-                Auto-save conversations
-              </label>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
+                <div className="flex-1">
+                  <label htmlFor="chat_sound_enabled" className="text-sm font-medium text-gray-700">
+                    Chat Sounds
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">Play notification sounds for new messages</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="chat_sound_enabled"
+                    checked={formData.chat_sound_enabled}
+                    onChange={(e) => setFormData({...formData, chat_sound_enabled: e.target.checked})}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
+                <div className="flex-1">
+                  <label htmlFor="auto_save_conversations" className="text-sm font-medium text-gray-700">
+                    Auto-save Conversations
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">Automatically save your chat history</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="auto_save_conversations"
+                    checked={formData.auto_save_conversations}
+                    onChange={(e) => setFormData({...formData, auto_save_conversations: e.target.checked})}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Conversation retention (days)
+                Conversation Retention (days)
               </label>
-              <input
-                type="number"
-                min="1"
-                max="3650"
-                value={formData.conversation_retention_days}
-                onChange={(e) => setFormData({...formData, conversation_retention_days: parseInt(e.target.value)})}
-                className="w-32 border border-gray-300 rounded-md px-3 py-2"
-              />
+              <div className="flex items-center gap-4">
+                <input
+                  type="number"
+                  min="1"
+                  max="3650"
+                  value={formData.conversation_retention_days}
+                  onChange={(e) => setFormData({...formData, conversation_retention_days: parseInt(e.target.value) || 365})}
+                  className="w-32 border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+                <span className="text-sm text-gray-600">days</span>
+              </div>
               <p className="text-xs text-gray-500 mt-1">
-                Conversations older than this will be automatically deleted
+                Conversations older than this will be automatically deleted (1-3650 days)
               </p>
             </div>
           </div>
         </div>
 
         {/* Notifications */}
-        <div>
-          <h4 className="font-medium text-gray-900 mb-4">Notifications</h4>
+        <div className="bg-gray-50 rounded-2xl p-6">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            Notifications
+          </h4>
           <div className="space-y-4">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="email_notifications"
-                checked={formData.email_notifications}
-                onChange={(e) => setFormData({...formData, email_notifications: e.target.checked})}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-              />
-              <label htmlFor="email_notifications" className="ml-2 text-sm text-gray-700">
-                Email notifications
+            <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
+              <div className="flex-1">
+                <label htmlFor="email_notifications" className="text-sm font-medium text-gray-700">
+                  Email Notifications
+                </label>
+                <p className="text-xs text-gray-500 mt-1">Receive important updates via email</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="email_notifications"
+                  checked={formData.email_notifications}
+                  onChange={(e) => setFormData({...formData, email_notifications: e.target.checked})}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
             
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="push_notifications"
-                checked={formData.push_notifications}
-                onChange={(e) => setFormData({...formData, push_notifications: e.target.checked})}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-              />
-              <label htmlFor="push_notifications" className="ml-2 text-sm text-gray-700">
-                Push notifications
+            <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
+              <div className="flex-1">
+                <label htmlFor="push_notifications" className="text-sm font-medium text-gray-700">
+                  Push Notifications
+                </label>
+                <p className="text-xs text-gray-500 mt-1">Get instant notifications in your browser</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="push_notifications"
+                  checked={formData.push_notifications}
+                  onChange={(e) => setFormData({...formData, push_notifications: e.target.checked})}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
           </div>
         </div>
         
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-6 border-t border-gray-200">
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            disabled={saving}
+            className="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-lg flex items-center gap-2"
           >
-            Save Settings
+            {saving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Save Settings
+              </>
+            )}
           </button>
         </div>
       </form>
@@ -663,6 +1010,8 @@ const SettingsTab = ({ settings, setSettings, setSuccess, setError, getAuthHeade
 
 // Notifications Tab Component
 const NotificationsTab = ({ notifications, setNotifications, setSuccess, setError, getAuthHeaders, API_URL }) => {
+  const [loading, setLoading] = useState(false);
+
   const markAsRead = async (notificationId) => {
     try {
       const response = await fetch(`${API_URL}/api/user/notifications/${notificationId}/read`, {
@@ -681,6 +1030,7 @@ const NotificationsTab = ({ notifications, setNotifications, setSuccess, setErro
   };
 
   const markAllAsRead = async () => {
+    setLoading(true);
     try {
       const response = await fetch(`${API_URL}/api/user/notifications/read-all`, {
         method: 'PATCH',
@@ -689,38 +1039,66 @@ const NotificationsTab = ({ notifications, setNotifications, setSuccess, setErro
 
       if (response.ok) {
         setNotifications(notifications.map(n => ({ ...n, read_status: 1 })));
-        setSuccess('All notifications marked as read');
+        setSuccess('All notifications marked as read! 📬');
+      } else {
+        setError('Failed to mark notifications as read');
       }
     } catch (error) {
       setError('Failed to mark notifications as read');
       console.error('Error marking all notifications as read:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const unreadCount = notifications.filter(n => !n.read_status).length;
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold">Notifications</h3>
-        {notifications.some(n => !n.read_status) && (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">Notifications</h3>
+          <p className="text-gray-600">
+            {unreadCount > 0 ? `You have ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'All caught up! No new notifications.'}
+          </p>
+        </div>
+        {unreadCount > 0 && (
           <button
             onClick={markAllAsRead}
-            className="text-sm text-blue-600 hover:text-blue-700"
+            disabled={loading}
+            className="px-4 py-2 text-sm bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors font-medium border border-blue-200 disabled:opacity-50 flex items-center gap-2"
           >
-            Mark all as read
+            {loading ? (
+              <>
+                <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                Marking...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Mark all as read
+              </>
+            )}
           </button>
         )}
       </div>
       
       <div className="space-y-4">
         {notifications.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            No notifications yet
+          <div className="text-center py-12 bg-gray-50 rounded-2xl">
+            <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <h4 className="text-lg font-medium text-gray-900 mb-2">No notifications yet</h4>
+            <p className="text-gray-500">When you receive notifications, they'll appear here.</p>
           </div>
         ) : (
           notifications.map((notification) => (
             <div
               key={notification.id}
-              className={`p-4 rounded-lg border ${
+              className={`p-6 rounded-2xl border transition-all duration-200 ${
                 notification.read_status 
                   ? 'bg-gray-50 border-gray-200' 
                   : 'bg-blue-50 border-blue-200'
@@ -810,7 +1188,7 @@ const SecurityTab = ({ setSuccess, setError, getAuthHeaders, API_URL }) => {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-6">Security Settings</h3>
+      <h3 className="text-lg font-semibold mb-6 text-black">Security Settings</h3>
       
       <div className="max-w-md">
         <form onSubmit={handlePasswordChange} className="space-y-4">
@@ -822,7 +1200,7 @@ const SecurityTab = ({ setSuccess, setError, getAuthHeaders, API_URL }) => {
               type="password"
               value={passwordData.current_password}
               onChange={(e) => setPasswordData({...passwordData, current_password: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -835,7 +1213,7 @@ const SecurityTab = ({ setSuccess, setError, getAuthHeaders, API_URL }) => {
               type="password"
               value={passwordData.new_password}
               onChange={(e) => setPasswordData({...passwordData, new_password: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -848,7 +1226,7 @@ const SecurityTab = ({ setSuccess, setError, getAuthHeaders, API_URL }) => {
               type="password"
               value={passwordData.confirm_password}
               onChange={(e) => setPasswordData({...passwordData, confirm_password: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -885,7 +1263,7 @@ const AccountTab = ({ stats, setSuccess, setError, getAuthHeaders, API_URL, show
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        a.download = `ontrack-data-export-${Date.now()}.json`;
+        a.download = `lisa-data-export-${Date.now()}.json`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -934,7 +1312,7 @@ const AccountTab = ({ stats, setSuccess, setError, getAuthHeaders, API_URL, show
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-6">Account Management</h3>
+      <h3 className="text-lg font-semibold mb-6 text-black">Account Management</h3>
       
       <div className="space-y-8">
         {/* Data Export */}
@@ -1004,7 +1382,7 @@ const AccountTab = ({ stats, setSuccess, setError, getAuthHeaders, API_URL, show
                   placeholder="Enter your password to confirm"
                   value={deletePassword}
                   onChange={(e) => setDeletePassword(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <div className="flex gap-3">
                   <button

@@ -1,335 +1,525 @@
-# OnTrack - AI-Powered Train Maintenance Assistant
+# 🚂 Lisa AI - Train Maintenance Assistant
 
-OnTrack is a comprehensive AI-powered chatbot application designed specifically for train maintenance professionals. It provides intelligent assistance for troubleshooting, maintenance procedures, and accessing technical documentation for train components.
+Lisa is an AI-powered assistant designed to help with train maintenance tasks, troubleshooting, and technical support. Built with modern technologies, it provides intelligent assistance through natural language processing and machine learning.
 
-## 🚀 Features
+## 📋 Table of Contents
 
-### Core Functionality
-- **AI-Powered Chat Interface**: Intelligent responses powered by OpenAI's GPT models
-- **Train Component Recognition**: Automatic identification and display of train parts with images
-- **Schematic Access**: Quick access to electrical schematics and technical diagrams
-- **Multi-Assistant Support**: Personal assistants for authenticated users, default assistant for anonymous users
-- **Real-time Notifications**: Toast notifications for user feedback and system status
+- [Features](#features)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Development](#development)
+- [Production Deployment](#production-deployment)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
 
-### User Management & Authentication
-- **User Authentication**: Secure login/registration system with JWT tokens
-- **Role-Based Access Control**: Admin and regular user roles with different permissions
-- **User Profiles**: Comprehensive user profile management with avatar upload
-- **Account Settings**: Customizable preferences and notification settings
-- **Password Management**: Secure password change functionality
-- **Account Export/Delete**: Data export and account deletion options
+## ✨ Features
 
-### Chat Features
-- **Persistent Chat History**: Automatic saving and loading of conversations
-- **Advanced Search**: Full-text search across chat history with filters
-- **Search Suggestions**: Intelligent search suggestions based on user history
-- **Export Functionality**: Export chat history as JSON files
-- **Message Filtering**: Filter by date range, message type, and content
-- **Conversation Management**: Create, load, and delete conversations
-- **Keyboard Shortcuts**: Global keyboard shortcuts for enhanced productivity
+### 🤖 AI-Powered Assistance
+- Intelligent train maintenance guidance
+- Technical troubleshooting support
+- Component identification and specifications
+- Maintenance scheduling recommendations
 
-### Admin Dashboard
-- **User Management**: View, edit, suspend, and delete user accounts
-- **Assistant Management**: Create, update, and manage AI assistants
-- **Vector Store Management**: Upload and manage knowledge base files
-- **System Statistics**: Comprehensive analytics and usage statistics
-- **Activity Monitoring**: Track user activities and system usage
-- **Bulk Operations**: Assign assistants to users and manage permissions
+### 🗄️ Data Management
+- PostgreSQL database for robust data storage
+- Conversation history and user management
+- File upload and processing capabilities
+- Export functionality for maintenance logs
 
-### UI/UX Enhancements
-- **Responsive Design**: Mobile-first design that works on all devices
-- **Modern Interface**: Clean, professional design with smooth animations
-- **Loading States**: Skeleton loaders and loading spinners for better UX
-- **Error Handling**: Comprehensive error handling with user-friendly messages
-- **Accessibility**: Keyboard navigation and screen reader support
-- **Dark/Light Theme**: Theme switching capabilities (in settings)
+### 🔐 Security & Authentication
+- Secure user authentication with JWT tokens
+- Role-based access control (Admin/User)
+- Rate limiting and input validation
+- Password reset functionality
 
-### Technical Features
-- **Component Architecture**: Modular React components for maintainability
-- **State Management**: Efficient state management with React hooks
-- **API Integration**: RESTful API with proper error handling
-- **Database Management**: SQLite database with proper relationships
-- **File Upload**: Secure file upload for avatars and documents
-- **Search Engine**: Full-text search with ranking and filtering
-- **Caching**: Efficient data caching for improved performance
+### 🎨 Modern UI/UX
+- Clean, responsive interface built with React
+- Real-time chat interface
+- Admin dashboard for system management
+- Mobile-friendly design
 
-## 🛠️ Technology Stack
+## 🏗️ Architecture
 
-### Frontend
-- **React 18**: Modern React with hooks and functional components
-- **React Router**: Client-side routing for SPA navigation
-- **Tailwind CSS**: Utility-first CSS framework for styling
-- **Context API**: State management for authentication and notifications
-- **Fetch API**: HTTP client for API communication
+Lisa AI
+├── Frontend (React)
+│   ├── User Interface
+│   ├── Authentication
+│   ├── Chat Interface
+│   └── Admin Dashboard
+├── Backend (Node.js/Express)
+│   ├── RESTful API
+│   ├── Authentication & Authorization
+│   ├── Database Management
+│   └── OpenAI Integration
+├── Database (PostgreSQL)
+│   ├── User Management
+│   ├── Conversation Storage
+│   ├── File Management
+│   └── Activity Logging
+└── AI Integration (OpenAI)
+    ├── GPT-4 Assistant
+    ├── Vector Store
+    └── File Processing
 
-### Backend
-- **Node.js**: JavaScript runtime for server-side development
-- **Express.js**: Web framework for building REST APIs
-- **SQLite**: Lightweight database for data persistence
-- **JWT**: JSON Web Tokens for secure authentication
-- **Multer**: File upload middleware
-- **OpenAI API**: Integration with GPT models
+## 📋 Prerequisites
 
-### Development Tools
-- **ESLint**: Code linting for consistent code quality
-- **Create React App**: Development environment and build tools
-- **npm**: Package management
-- **Git**: Version control
+Before installing Lisa, ensure you have:
 
-## 📁 Project Structure
+- **Node.js** (v18.0.0 or higher)
+- **npm** (v8.0.0 or higher)
+- **PostgreSQL** (v13.0 or higher)
+- **OpenAI API Key** (for AI functionality)
+- **SMTP Server** (for email notifications)
 
-```
-ontrack/
-├── client/chatbot-frontend-2/          # React frontend application
-│   ├── public/                         # Static assets
-│   ├── src/
-│   │   ├── components/                 # React components
-│   │   │   ├── AdminDashboard.jsx      # Admin panel
-│   │   │   ├── ChatInterface.jsx       # Main chat interface
-│   │   │   ├── ChatHistory.jsx         # Chat history sidebar
-│   │   │   ├── UserProfile.jsx         # User profile management
-│   │   │   ├── AuthContext.jsx         # Authentication context
-│   │   │   ├── NotificationSystem.jsx  # Toast notifications
-│   │   │   ├── SearchComponent.jsx     # Advanced search
-│   │   │   ├── LoadingSpinner.jsx      # Loading components
-│   │   │   ├── KeyboardShortcuts.jsx   # Keyboard shortcuts
-│   │   │   └── ...                     # Other components
-│   │   ├── App.js                      # Main app component
-│   │   └── index.js                    # App entry point
-│   └── package.json                    # Frontend dependencies
-├── server/chatbot-backend/             # Node.js backend
-│   ├── routes/                         # API routes
-│   │   ├── auth.js                     # Authentication routes
-│   │   ├── admin.js                    # Admin routes
-│   │   ├── chat.js                     # Chat and history routes
-│   │   └── user.js                     # User profile routes
-│   ├── middleware/                     # Express middleware
-│   ├── scripts/                        # Database scripts
-│   ├── uploads/                        # File uploads
-│   ├── server.js                       # Main server file
-│   └── package.json                    # Backend dependencies
-└── README.md                           # Project documentation
+## 🚀 Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/kartvirya/lisa.git
+cd lisa
 ```
 
-## 🚀 Getting Started
+### 2. Set Up PostgreSQL Database
 
-### Prerequisites
-- Node.js (v14 or higher)
-- npm (v6 or higher)
-- OpenAI API key
-
-### Installation
-
-1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd ontrack
-   ```
+sudo -u postgres psql
+CREATE DATABASE lisa_db;
+CREATE USER lisa_user WITH PASSWORD 'lisa_password';
+GRANT ALL PRIVILEGES ON DATABASE lisa_db TO lisa_user;
+ALTER USER lisa_user CREATEDB;
+\q
+```
 
-2. **Install backend dependencies**
+### 3. Install Dependencies
+
+**Backend:**
    ```bash
    cd server/chatbot-backend
    npm install
    ```
 
-3. **Install frontend dependencies**
+**Frontend:**
    ```bash
-   cd ../../client/chatbot-frontend-2
+cd client/chatbot-frontend-2
    npm install
    ```
 
-4. **Set up environment variables**
-   
-   Create a `.env` file in `server/chatbot-backend/`:
-   ```env
-   OPENAI_API_KEY=your_openai_api_key_here
-   JWT_SECRET=your_jwt_secret_here
-   PORT=3001
-   ```
+### 4. Environment Configuration
 
-5. **Initialize the database**
+Create environment files:
+
+**Backend (.env):**
+```bash
+cd server/chatbot-backend
+cp env.example .env
+```
+
+Update the `.env` file with your configuration:
+
+   ```env
+# Lisa AI - Environment Configuration
+PORT=5000
+NODE_ENV=development
+
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=lisa_db
+DB_USER=lisa_user
+DB_PASSWORD=lisa_password
+
+# OpenAI Configuration
+   OPENAI_API_KEY=your_openai_api_key_here
+
+# JWT Configuration
+JWT_SECRET=your_jwt_secret_key_here
+
+# Email Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+EMAIL_FROM=Lisa AI <your-email@gmail.com>
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# File Upload
+MAX_FILE_SIZE=10485760
+UPLOAD_PATH=./uploads
+
+# Application Configuration
+FRONTEND_URL=http://localhost:3000
+BACKEND_URL=http://localhost:5000
+
+# System Configuration
+MAX_CONVERSATION_LENGTH=100
+SESSION_TIMEOUT=86400000
+LOG_LEVEL=info
+APP_NAME=Lisa AI
+```
+
+### 5. Initialize Database
+
    ```bash
    cd server/chatbot-backend
    npm run init-db
    ```
 
-6. **Start the backend server**
+### 6. Start the Application
+
+**Development Mode:**
+
+Terminal 1 (Backend):
+```bash
+cd server/chatbot-backend
+npm run dev
+```
+
+Terminal 2 (Frontend):
    ```bash
+cd client/chatbot-frontend-2
    npm start
    ```
 
-7. **Start the frontend development server**
+**Production Mode:**
    ```bash
-   cd ../../client/chatbot-frontend-2
+# Build frontend
+cd client/chatbot-frontend-2
+npm run build
+
+# Start backend
+cd server/chatbot-backend
    npm start
    ```
 
-8. **Access the application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:3001
+## ⚙️ Configuration
 
-## 🎯 Usage
+### OpenAI Setup
 
-### For Regular Users
-1. **Registration/Login**: Create an account or sign in
-2. **Chat Interface**: Start conversations with the AI assistant
-3. **Chat History**: Access previous conversations via the sidebar
-4. **Search**: Use the search feature to find specific conversations
-5. **Profile Management**: Update your profile and settings
-6. **Export Data**: Export your chat history for backup
+1. Get your OpenAI API key from [OpenAI Platform](https://platform.openai.com/)
+2. Add the key to your `.env` file
+3. The system will automatically create assistants for new users
 
-### For Administrators
-1. **Admin Access**: Use admin credentials to access the admin panel
-2. **User Management**: View and manage user accounts
-3. **Assistant Management**: Create and configure AI assistants
-4. **System Monitoring**: View system statistics and user activities
-5. **Content Management**: Upload and manage knowledge base files
+### Email Configuration
 
-### Keyboard Shortcuts
-- `Ctrl/Cmd + K`: Focus input field
-- `Ctrl/Cmd + N`: Start new chat
-- `Ctrl/Cmd + H`: Toggle chat history
-- `Ctrl/Cmd + P`: Go to profile
-- `Ctrl/Cmd + A`: Go to admin (admin only)
-- `Ctrl/Cmd + /`: Show keyboard shortcuts help
-- `Home`: Go to chat interface
-- `Escape`: Close modals/sidebars
-
-## 🔧 Configuration
-
-### Environment Variables
-- `OPENAI_API_KEY`: Your OpenAI API key for GPT integration
-- `JWT_SECRET`: Secret key for JWT token signing
-- `PORT`: Backend server port (default: 3001)
-- `NODE_ENV`: Environment mode (development/production)
+1. Set up an SMTP server (Gmail, SendGrid, etc.)
+2. Configure SMTP settings in your `.env` file
+3. Enable email notifications in user settings
 
 ### Database Configuration
-The application uses SQLite for data persistence. The database file is automatically created when you run the initialization script.
 
-### OpenAI Configuration
-Configure your OpenAI assistant settings in the admin panel:
-- Model selection (GPT-4, GPT-3.5-turbo)
-- Custom instructions and prompts
-- Vector store integration for knowledge base
+For production, ensure your PostgreSQL instance is properly configured:
 
-## 📊 API Documentation
+```sql
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+
+-- Optimize for performance
+ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements';
+ALTER SYSTEM SET track_activity_query_size = 2048;
+ALTER SYSTEM SET log_min_duration_statement = 1000;
+```
+
+## 🔧 Usage
+
+### User Interface
+
+1. **Registration**: Create a new account
+2. **Login**: Access your personal dashboard
+3. **Chat**: Interact with your AI assistant
+4. **History**: View conversation history
+5. **Profile**: Manage your account settings
+
+### Admin Interface
+
+1. **Dashboard**: System overview and statistics
+2. **User Management**: Manage user accounts
+3. **AI Assistants**: Configure AI assistants
+4. **System Settings**: Configure application settings
+5. **Monitoring**: View system logs and activities
+
+### API Usage
+
+```javascript
+// Authentication
+const response = await fetch('/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ username, password })
+});
+
+// Chat with AI
+const chatResponse = await fetch('/api/chat/send', {
+  method: 'POST',
+  headers: { 
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({ message: 'Hello Lisa!' })
+});
+```
+
+## 📚 API Documentation
 
 ### Authentication Endpoints
-- `POST /api/auth/register` - User registration
+
+- `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - User login
 - `POST /api/auth/logout` - User logout
-- `GET /api/auth/verify` - Verify JWT token
+- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/reset-password` - Reset password
 
 ### Chat Endpoints
-- `POST /api/chat` - Send message to AI
-- `GET /api/chat/history` - Get user's chat history
-- `GET /api/chat/history/:threadId` - Get specific conversation
-- `POST /api/chat/history` - Save conversation
-- `DELETE /api/chat/history/:threadId` - Delete conversation
-- `GET /api/chat/search` - Search chat history
-- `GET /api/chat/search/suggestions` - Get search suggestions
 
-### User Endpoints
+- `POST /api/chat/send` - Send message to AI
+- `GET /api/chat/history` - Get conversation history
+- `POST /api/chat/conversation` - Start new conversation
+- `DELETE /api/chat/conversation/:id` - Delete conversation
+
+### User Management
+
 - `GET /api/user/profile` - Get user profile
 - `PUT /api/user/profile` - Update user profile
-- `POST /api/user/profile/avatar` - Upload avatar
 - `GET /api/user/settings` - Get user settings
 - `PUT /api/user/settings` - Update user settings
-- `PUT /api/user/password` - Change password
-- `GET /api/user/account/stats` - Get account statistics
-- `GET /api/user/account/export` - Export user data
-- `DELETE /api/user/account` - Delete user account
 
 ### Admin Endpoints
+
 - `GET /api/admin/users` - Get all users
-- `PATCH /api/admin/users/:id/status` - Update user status
-- `DELETE /api/admin/users/:id` - Delete user
-- `GET /api/admin/assistants` - Get all assistants
-- `POST /api/admin/assistants` - Create assistant
-- `PATCH /api/admin/assistants/:id` - Update assistant
-- `DELETE /api/admin/assistants/:id` - Delete assistant
 - `GET /api/admin/statistics` - Get system statistics
-- `GET /api/admin/activities` - Get user activities
+- `POST /api/admin/assistants` - Create AI assistant
+- `GET /api/admin/activities` - Get activity logs
 
-## 🔒 Security Features
+## 🛠️ Development
 
-- **JWT Authentication**: Secure token-based authentication
-- **Password Hashing**: Bcrypt for secure password storage
-- **Input Validation**: Server-side validation for all inputs
-- **SQL Injection Prevention**: Parameterized queries
-- **File Upload Security**: File type and size validation
-- **Rate Limiting**: API rate limiting to prevent abuse
-- **CORS Configuration**: Proper cross-origin resource sharing
-- **Environment Variables**: Sensitive data stored in environment variables
+### Project Structure
 
-## 🚀 Deployment
+```
+lisa/
+├── client/chatbot-frontend-2/          # React frontend
+│   ├── src/
+│   │   ├── components/              # React components
+│   │   ├── pages/                  # Page components
+│   │   ├── hooks/                  # Custom hooks
+│   │   └── utils/                  # Utility functions
+│   └── public/                     # Static assets
+├── server/chatbot-backend/             # Node.js backend
+│   ├── routes/                     # API routes
+│   ├── middleware/                 # Express middleware
+│   ├── services/                   # Business logic
+│   ├── config/                     # Configuration files
+│   └── scripts/                    # Database scripts
+└── docs/                           # Documentation
+```
 
-### Production Build
+### Development Commands
+
 ```bash
-cd client/chatbot-frontend-2
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Run database migrations
+npm run migrate
+
+# Initialize database
+npm run init-db
+
+# Run tests
+npm test
+
+# Build for production
 npm run build
 ```
 
-### Environment Setup
-1. Set production environment variables
-2. Configure database for production
-3. Set up reverse proxy (nginx recommended)
-4. Configure SSL certificates
-5. Set up monitoring and logging
+### Database Migrations
 
-### Docker Deployment (Optional)
-Create Dockerfile for containerized deployment:
-```dockerfile
-# Frontend Dockerfile
-FROM node:16-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["npm", "start"]
+```bash
+# Create migration
+npm run migrate:create migration_name
+
+# Run migrations
+npm run migrate:up
+
+# Rollback migration
+npm run migrate:down
+```
+
+## 🚀 Production Deployment
+
+### Docker Deployment
+
+```bash
+# Build and run with Docker Compose
+docker-compose up -d
+
+# Scale services
+docker-compose up -d --scale backend=3
+```
+
+### Manual Deployment
+
+1. **Server Setup**
+   ```bash
+   # Install dependencies
+   sudo apt update
+   sudo apt install nodejs npm postgresql nginx
+
+   # Configure PostgreSQL
+   sudo -u postgres createdb lisa_db
+   ```
+
+2. **Application Deployment**
+   ```bash
+   # Clone repository
+   git clone https://github.com/kartvirya/lisa.git
+   cd lisa
+
+   # Install dependencies
+   npm install --production
+
+   # Build frontend
+   cd client/chatbot-frontend-2
+   npm run build
+
+   # Start backend with PM2
+   pm2 start server/chatbot-backend/server.js --name lisa-backend
+   ```
+
+3. **Nginx Configuration**
+   ```nginx
+   server {
+       listen 80;
+       server_name yourdomain.com;
+       
+       location / {
+           proxy_pass http://localhost:3000;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+       }
+       
+       location /api/ {
+           proxy_pass http://localhost:5000;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+       }
+   }
+   ```
+
+### Health Check
+
+```bash
+# Check database connection
+pg_isready -d lisa_db -h localhost -p 5432
+
+# Check API health
+curl http://localhost:5000/api/health
+
+# Check frontend
+curl http://localhost:3000
+```
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. **Database Connection Error**
+   ```bash
+   # Check PostgreSQL status
+   sudo systemctl status postgresql
+   
+   # Restart PostgreSQL
+   sudo systemctl restart postgresql
+   ```
+
+2. **OpenAI API Errors**
+   - Verify API key is correct
+   - Check API quota and billing
+   - Review OpenAI service status
+
+3. **Frontend Build Issues**
+   ```bash
+   # Clear cache and rebuild
+   rm -rf node_modules package-lock.json
+   npm install
+   npm run build
+   ```
+
+4. **Email Not Sending**
+   - Verify SMTP credentials
+   - Check firewall settings
+   - Enable "Less secure app access" for Gmail
+
+### Logs
+
+```bash
+# View application logs
+tail -f server/chatbot-backend/logs/app.log
+
+# View database logs
+sudo tail -f /var/log/postgresql/postgresql-13-main.log
+
+# View system logs
+journalctl -u nginx -f
 ```
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+We welcome contributions to Lisa AI! Please follow these guidelines:
 
-## 📝 License
+1. **Fork the Repository**
+2. **Create Feature Branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Commit Changes**
+   ```bash
+   git commit -m "Add your feature description"
+   ```
+4. **Push to Branch**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+5. **Create Pull Request**
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+### Code Style
 
-## 🆘 Support
+- Use ESLint for JavaScript linting
+- Follow React best practices
+- Write meaningful commit messages
+- Add tests for new features
 
-For support and questions:
-- Create an issue in the repository
-- Contact the development team
-- Check the documentation for common solutions
+### Bug Reports
 
-## 🔄 Version History
+Please include:
+- Lisa version
+- Node.js version
+- Operating system
+- Steps to reproduce
+- Expected vs actual behavior
 
-- **v1.0.0** - Initial release with basic chat functionality
-- **v1.1.0** - Added user authentication and profiles
-- **v1.2.0** - Implemented chat history and search
-- **v1.3.0** - Added admin dashboard and user management
-- **v1.4.0** - Enhanced UI/UX with notifications and shortcuts
-- **v1.5.0** - Added advanced search and export functionality
+## 📄 License
 
-## 🎯 Roadmap
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-- [ ] Mobile app development
-- [ ] Advanced analytics dashboard
-- [ ] Multi-language support
-- [ ] Voice chat integration
-- [ ] Advanced AI model fine-tuning
-- [ ] Integration with external maintenance systems
-- [ ] Real-time collaboration features
-- [ ] Advanced reporting and insights
+## 🙏 Acknowledgments
+
+- OpenAI for providing AI capabilities
+- React team for the excellent frontend framework
+- PostgreSQL community for the robust database
+- All contributors and users of Lisa AI
 
 ---
 
-**OnTrack** - Empowering train maintenance professionals with AI-powered assistance. # ontrack
+**Lisa AI** - Intelligent Train Maintenance Assistant

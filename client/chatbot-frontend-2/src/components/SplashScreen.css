@@ -25,6 +25,7 @@
   background: white;
   padding: 2rem;
   text-align: center;
+  animation: splashContentEnter 0.8s ease-out;
 }
 
 .splash-screen-video {
@@ -41,12 +42,21 @@
   font-weight: bold;
   color: #1f2937;
   margin-bottom: 0.5rem;
+  animation: splashTitleSlide 0.6s ease-out 0.2s both;
 }
 
 .splash-subtitle {
   font-size: 1.125rem;
   color: #6b7280;
   margin-bottom: 1.5rem;
+  animation: splashSubtitleSlide 0.6s ease-out 0.4s both;
+}
+
+.splash-loading-text {
+  margin-top: 1rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  animation: splashPulse 2s infinite;
 }
 
 @keyframes splashFadeOut {
@@ -56,5 +66,67 @@
   to {
     opacity: 0;
     pointer-events: none;
+  }
+}
+
+@keyframes splashContentEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes splashTitleSlide {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splashSubtitleSlide {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splashPulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .splash-screen-content {
+    width: 95%;
+    padding: 1.5rem;
+  }
+  
+  .splash-title {
+    font-size: 1.75rem;
+  }
+  
+  .splash-subtitle {
+    font-size: 1rem;
+  }
+  
+  .splash-screen-video {
+    max-height: 300px;
   }
 }

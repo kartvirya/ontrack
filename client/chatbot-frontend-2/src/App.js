@@ -6,6 +6,7 @@ import UserProfile from './components/UserProfile';
 import SplashScreen from './components/SplashScreen';
 import AuthPage from './components/AuthPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider } from './components/AuthContext';
 import { NotificationProvider } from './components/NotificationSystem';
 import AdminRoute from './components/AdminRoute';
@@ -23,21 +24,22 @@ const AppContent = () => {
   };
 
   return (
+    <ErrorBoundary>
     <div className="App relative">
       <KeyboardShortcuts />
       
       <Routes>
         <Route path="/" element={<ChatInterface />} />
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route 
-          path="/profile" 
-          element={
-            <ProtectedRoute>
-              <UserProfile />
-            </ProtectedRoute>
-          } 
-        />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <UserProfile />
+              </ProtectedRoute>
+            } 
+          />
         <Route 
           path="/admin" 
           element={
@@ -52,18 +54,22 @@ const AppContent = () => {
       {/* The splash screen is conditionally rendered on top */}
       {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
     </div>
+    </ErrorBoundary>
   );
 };
 
+// Main App component
 function App() {
   return (
+    <ErrorBoundary>
+      <Router>
     <AuthProvider>
       <NotificationProvider>
-        <Router>
           <AppContent />
-        </Router>
       </NotificationProvider>
     </AuthProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

@@ -1,17 +1,20 @@
 {
-  "name": "chatbot-backend",
+  "name": "lisa-backend",
   "version": "1.0.0",
   "main": "index.js",
+  "description": "Lisa AI Backend - Intelligent Train Maintenance Assistant API",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
     "init-db": "node scripts/init-database.js",
+    "init-production-db": "node scripts/init-production-db.js",
+    "migrate-to-postgresql": "node scripts/migrate-sqlite-to-postgresql.js",
+    "build": "echo 'No build step required for Node.js backend'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": ["lisa", "ai", "train", "maintenance", "assistant", "api"],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
@@ -24,7 +27,8 @@
     "multer": "^2.0.0",
     "nodemailer": "^6.10.1",
     "openai": "^4.85.1",
-    "sqlite3": "^5.1.7",
+    "pg": "^8.11.3",
+    "pg-pool": "^3.6.1",
     "uuid": "^10.0.0"
   }
 }
