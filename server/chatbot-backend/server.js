@@ -72,6 +72,32 @@ app.get('/api/db-test', async (req, res) => {
   }
 });
 
+// Temporary endpoint to check database schema
+app.get('/api/db-schema', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `);
+    
+    const tables = result.rows.map(row => row.table_name);
+    res.json({ 
+      status: 'Schema retrieved', 
+      tables: tables,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Schema check failed:', error);
+    res.status(500).json({ 
+      status: 'Schema check failed', 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
