@@ -7,6 +7,9 @@ const fs = require('fs');
 const session = require('express-session');
 require('dotenv').config();
 
+// Import database query function
+const { query } = require('./config/database');
+
 // Import authentication middleware and routes
 const { authenticateToken, requireActiveUser, logActivity, verifyUser } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
