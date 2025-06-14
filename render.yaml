@@ -1,22 +1,4 @@
 services:
-  # PostgreSQL Database
-  - type: pserv
-    name: lisa-database
-    env: docker
-    plan: starter
-    dockerCommand: postgres
-    disk:
-      name: lisa-db-disk
-      mountPath: /var/lib/postgresql/data
-      sizeGB: 1
-    envVars:
-      - key: POSTGRES_DB
-        value: lisa_db
-      - key: POSTGRES_USER
-        value: lisa_user
-      - key: POSTGRES_PASSWORD
-        generateValue: true
-
   # Backend API Service
   - type: web
     name: lisa-backend
