@@ -21,7 +21,7 @@ services:
   - type: web
     name: lisa-backend
     env: node
-    plan: free
+    plan: starter
     buildCommand: cd server/chatbot-backend && npm install
     startCommand: cd server/chatbot-backend && node init-server.js
     healthCheckPath: /api/health
@@ -51,7 +51,7 @@ services:
   - type: web
     name: lisa-frontend
     env: static
-    plan: free
+    plan: starter
     buildCommand: cd client/chatbot-frontend-2 && npm install && npm run build
     staticPublishPath: client/chatbot-frontend-2/build
     buildFilter:
