@@ -3,7 +3,7 @@ services:
   - type: pserv
     name: lisa-database
     env: docker
-    plan: free
+    plan: starter
     dockerCommand: postgres
     disk:
       name: lisa-db-disk
@@ -21,7 +21,7 @@ services:
   - type: web
     name: lisa-backend
     env: node
-    plan: starter
+    plan: free
     buildCommand: cd server/chatbot-backend && npm install
     startCommand: cd server/chatbot-backend && node init-server.js
     healthCheckPath: /api/health
