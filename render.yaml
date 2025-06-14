@@ -29,11 +29,11 @@ services:
         value: https://lisa-frontend.onrender.com
 
   # Frontend Static Site
-  - type: web
+  - type: static
     name: lisa-frontend
-    runtime: static
-    buildCommand: cd client/chatbot-frontend-2 && npm install && npm run build
-    staticPublishPath: client/chatbot-frontend-2/build
+    buildCommand: npm install && npm run build
+    publishPath: ./build
+    rootDir: client/chatbot-frontend-2
     buildFilter:
       paths:
         - client/chatbot-frontend-2/**
