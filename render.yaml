@@ -31,9 +31,8 @@ services:
   # Frontend Static Site
   - type: static
     name: lisa-frontend
-    buildCommand: npm install && npm run build
-    publishPath: ./build
-    rootDir: client/chatbot-frontend-2
+    buildCommand: cd client/chatbot-frontend-2 && npm install && npm run build
+    publishPath: client/chatbot-frontend-2/build
     buildFilter:
       paths:
         - client/chatbot-frontend-2/**
