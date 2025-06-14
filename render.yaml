@@ -3,7 +3,7 @@ services:
   - type: pserv
     name: lisa-database
     env: docker
-    plan: starter
+    plan: free
     dockerCommand: postgres
     disk:
       name: lisa-db-disk
@@ -67,4 +67,4 @@ databases:
   - name: lisa-database
     databaseName: lisa_db
     user: lisa_user
-    plan: free 
+    plan: starter 
