@@ -24,9 +24,9 @@ services:
       - key: ASSISTANT_ID
         value: asst_OLv0IF7JHeyILkkxFRSBMKiC
       - key: FRONTEND_URL
-        value: https://lisa-frontend.onrender.com
+        value: https://lisa-frontend-yrg6.onrender.com
       - key: CORS_ORIGIN
-        value: https://lisa-frontend.onrender.com
+        value: https://lisa-frontend-yrg6.onrender.com
 
   # Frontend Static Site
   - type: static
@@ -38,7 +38,7 @@ services:
         - client/chatbot-frontend-2/**
     envVars:
       - key: REACT_APP_API_URL
-        value: https://lisa-backend.onrender.com
+        value: https://lisa-backend-yrg6.onrender.com
       - key: REACT_APP_ENVIRONMENT
         value: production
 
