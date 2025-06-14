@@ -2,17 +2,32 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 // PostgreSQL connection configuration
-const dbConfig = {
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'lisa_db',
-  password: process.env.DB_PASSWORD || 'postgres',
-  port: process.env.DB_PORT || 5432,
-  // Connection pool settings
-  max: 20, // maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // how long a client is allowed to remain idle before being closed
-  connectionTimeoutMillis: 2000, // how long to wait when connecting a new client
-};
+let dbConfig;
+
+if (process.env.DATABASE_URL) {
+  // Use DATABASE_URL (for production/Render)
+  dbConfig = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    // Connection pool settings
+    max: 20, // maximum number of clients in the pool
+    idleTimeoutMillis: 30000, // how long a client is allowed to remain idle before being closed
+    connectionTimeoutMillis: 2000, // how long to wait when connecting a new client
+  };
+} else {
+  // Use individual environment variables (for development)
+  dbConfig = {
+    user: process.env.DB_USER || 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    database: process.env.DB_NAME || 'lisa_db',
+    password: process.env.DB_PASSWORD || 'postgres',
+    port: process.env.DB_PORT || 5432,
+    // Connection pool settings
+    max: 20, // maximum number of clients in the pool
+    idleTimeoutMillis: 30000, // how long a client is allowed to remain idle before being closed
+    connectionTimeoutMillis: 2000, // how long to wait when connecting a new client
+  };
+}
 
 // Create connection pool
 const pool = new Pool(dbConfig);

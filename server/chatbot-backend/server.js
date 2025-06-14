@@ -47,6 +47,28 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Database test endpoint
+app.get('/api/db-test', async (req, res) => {
+  try {
+    const result = await query('SELECT NOW() as current_time, version() as postgres_version');
+    res.json({ 
+      status: 'Database connected', 
+      timestamp: new Date().toISOString(),
+      database: {
+        current_time: result.rows[0].current_time,
+        postgres_version: result.rows[0].postgres_version
+      }
+    });
+  } catch (error) {
+    console.error('Database test failed:', error);
+    res.status(500).json({ 
+      status: 'Database connection failed', 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
