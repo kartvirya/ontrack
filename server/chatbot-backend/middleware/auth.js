@@ -41,22 +41,28 @@ const requireActiveUser = (req, res, next) => {
 const logActivity = (action) => {
   return async (req, res, next) => {
     try {
-    const userId = req.user ? req.user.id : null;
-    const ipAddress = req.ip || req.connection.remoteAddress;
-    const userAgent = req.get('User-Agent');
-    const details = JSON.stringify({
-      url: req.originalUrl,
-      method: req.method,
-      body: req.method === 'POST' ? req.body : undefined
-    });
+      const userId = req.user ? req.user.id : null;
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      const userAgent = req.get('User-Agent');
+      const details = JSON.stringify({
+        url: req.originalUrl,
+        method: req.method,
+        body: req.method === 'POST' ? req.body : undefined
+      });
 
-      await query(`
-      INSERT INTO activity_logs (user_id, action, details, ip_address, user_agent)
-        VALUES ($1, $2, $3, $4, $5)
-      `, [userId, action, details, ipAddress, userAgent]);
-    } catch (error) {
-      console.error('Error logging activity:', error);
+      // Try to log activity, but don't fail if table doesn't exist
+      try {
+        await query(`
+          INSERT INTO activity_logs (user_id, action, details, ip_address, user_agent)
+          VALUES ($1, $2, $3, $4, $5)
+        `, [userId, action, details, ipAddress, userAgent]);
+      } catch (dbError) {
+        // Log the error but don't fail the request
+        console.warn('Activity logging failed (table may not exist):', dbError.message);
       }
+    } catch (error) {
+      console.error('Error in activity logging middleware:', error);
+    }
 
     next();
   };
