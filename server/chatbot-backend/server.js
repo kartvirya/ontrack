@@ -867,6 +867,74 @@ app.post('/api/create-admin', async (req, res) => {
   }
 });
 
+// Temporary endpoint to fix database schema
+app.post('/api/fix-schema', async (req, res) => {
+  try {
+    const fixes = [];
+    
+    // Add missing columns to users table
+    try {
+      await query(`
+        ALTER TABLE users 
+        ADD COLUMN IF NOT EXISTS openai_assistant_id VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS vector_store_id VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS reset_token_expiry TIMESTAMP
+      `);
+      fixes.push('Added missing columns to users table');
+    } catch (error) {
+      fixes.push(`Users table fix failed: ${error.message}`);
+    }
+    
+    // Create user_activity table if it doesn't exist
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS user_activity (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id),
+          action VARCHAR(255) NOT NULL,
+          details JSONB,
+          ip_address INET,
+          user_agent TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      fixes.push('Created/verified user_activity table');
+    } catch (error) {
+      fixes.push(`User_activity table fix failed: ${error.message}`);
+    }
+    
+    // Create user_sessions table if it doesn't exist
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS user_sessions (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id),
+          session_token VARCHAR(255) UNIQUE NOT NULL,
+          expires_at TIMESTAMP NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      fixes.push('Created/verified user_sessions table');
+    } catch (error) {
+      fixes.push(`User_sessions table fix failed: ${error.message}`);
+    }
+    
+    res.json({
+      message: 'Database schema fixes applied',
+      fixes: fixes,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Schema fix error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fix database schema',
+      details: error.message
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
