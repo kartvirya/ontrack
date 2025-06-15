@@ -941,6 +941,56 @@ app.post('/api/fix-schema', async (req, res) => {
   }
 });
 
+// Temporary endpoint to test OpenAI API key
+app.get('/api/test-openai', async (req, res) => {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      return res.status(500).json({ 
+        error: 'No OpenAI API key found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Test the API key by listing models
+    const response = await fetch('https://api.openai.com/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.text();
+      return res.status(response.status).json({
+        error: 'OpenAI API key test failed',
+        status: response.status,
+        details: errorData,
+        keyPrefix: apiKey.substring(0, 10) + '...',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    const data = await response.json();
+    
+    res.json({
+      status: 'OpenAI API key is valid',
+      modelCount: data.data ? data.data.length : 0,
+      keyPrefix: apiKey.substring(0, 10) + '...',
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('OpenAI test error:', error);
+    res.status(500).json({ 
+      error: 'OpenAI API test failed',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
