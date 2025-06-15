@@ -55,6 +55,8 @@ export const AuthProvider = ({ children }) => {
   }, [API_URL]);
 
   const login = async (username, password) => {
+    console.log('AuthContext: Starting login process for:', username);
+    
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
@@ -64,10 +66,14 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ username, password }),
       });
 
+      console.log('AuthContext: Login response status:', response.status);
+      
       const data = await response.json();
+      console.log('AuthContext: Login response data:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        console.log('AuthContext: Login failed with error:', data.error);
+        return { success: false, error: data.error || 'Login failed' };
       }
 
       // Store token and user data
@@ -77,14 +83,17 @@ export const AuthProvider = ({ children }) => {
       setToken(data.token);
       setUser(data.user);
 
+      console.log('AuthContext: Login successful for user:', data.user.username);
       return { success: true, user: data.user };
     } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, error: error.message };
+      console.error('AuthContext: Login error:', error);
+      return { success: false, error: error.message || 'Network error during login' };
     }
   };
 
   const register = async (username, email, password) => {
+    console.log('AuthContext: Starting registration process for:', username, email);
+    
     try {
       const response = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
@@ -94,10 +103,14 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ username, email, password }),
       });
 
+      console.log('AuthContext: Registration response status:', response.status);
+      
       const data = await response.json();
+      console.log('AuthContext: Registration response data:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
+        console.log('AuthContext: Registration failed with error:', data.error);
+        return { success: false, error: data.error || 'Registration failed' };
       }
 
       // Store token and user data
@@ -107,6 +120,7 @@ export const AuthProvider = ({ children }) => {
       setToken(data.token);
       setUser(data.user);
 
+      console.log('AuthContext: Registration successful for user:', data.user.username);
       return { 
         success: true, 
         user: data.user, 
@@ -114,8 +128,8 @@ export const AuthProvider = ({ children }) => {
         message: data.message 
       };
     } catch (error) {
-      console.error('Registration error:', error);
-      return { success: false, error: error.message };
+      console.error('AuthContext: Registration error:', error);
+      return { success: false, error: error.message || 'Network error during registration' };
     }
   };
 

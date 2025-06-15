@@ -94,27 +94,49 @@ const AuthPage = () => {
 
     try {
       if (mode === 'login') {
-        await login(formData.username, formData.password);
-        addNotification({
-          type: 'success',
-          title: 'Welcome back!',
-          message: 'Successfully logged in',
-          duration: 3000
-        });
-        navigate(from, { replace: true });
+        console.log('Attempting login with:', { username: formData.username });
+        const result = await login(formData.username, formData.password);
+        
+        console.log('Login result:', result);
+        
+        if (result.success) {
+          addNotification({
+            type: 'success',
+            title: 'Welcome back!',
+            message: `Successfully logged in as ${result.user.username}`,
+            duration: 3000
+          });
+          navigate(from, { replace: true });
+        } else {
+          // Login failed - show error message
+          throw new Error(result.error || 'Invalid username or password');
+        }
       } else if (mode === 'register') {
-        await register(formData.username, formData.email, formData.password);
-        addNotification({
-          type: 'success',
-          title: 'Account created!',
-          message: 'Registration successful. Welcome!',
-          duration: 3000
+        console.log('Attempting registration with:', { 
+          username: formData.username, 
+          email: formData.email 
         });
-        navigate(from, { replace: true });
+        const result = await register(formData.username, formData.email, formData.password);
+        
+        console.log('Registration result:', result);
+        
+        if (result.success) {
+          addNotification({
+            type: 'success',
+            title: 'Account created!',
+            message: `Welcome ${result.user.username}! Registration successful.`,
+            duration: 3000
+          });
+          navigate(from, { replace: true });
+        } else {
+          // Registration failed - show error message
+          throw new Error(result.error || 'Registration failed');
+        }
       } else if (mode === 'forgot-password') {
         await handleForgotPassword();
       }
     } catch (error) {
+      console.error('Authentication error:', error);
       addNotification({
         type: 'error',
         title: mode === 'login' ? 'Login Failed' : mode === 'register' ? 'Registration Failed' : 'Error',
