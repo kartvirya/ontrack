@@ -53,7 +53,7 @@ const logActivity = (action) => {
       // Try to log activity, but don't fail if table doesn't exist
       try {
         await query(`
-          INSERT INTO activity_logs (user_id, action, details, ip_address, user_agent)
+          INSERT INTO user_activity (user_id, action, details, ip_address, user_agent)
           VALUES ($1, $2, $3, $4, $5)
         `, [userId, action, details, ipAddress, userAgent]);
       } catch (dbError) {

@@ -98,6 +98,40 @@ app.get('/api/db-schema', async (req, res) => {
   }
 });
 
+// Temporary endpoint to check users table structure
+app.get('/api/db-users', async (req, res) => {
+  try {
+    // Get table structure
+    const structure = await query(`
+      SELECT column_name, data_type, is_nullable
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND table_schema = 'public'
+      ORDER BY ordinal_position
+    `);
+    
+    // Get existing users (without passwords)
+    const users = await query(`
+      SELECT id, username, email, role, status, created_at, last_login
+      FROM users 
+      ORDER BY id
+    `);
+    
+    res.json({ 
+      status: 'Users table info retrieved', 
+      structure: structure.rows,
+      users: users.rows,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Users table check failed:', error);
+    res.status(500).json({ 
+      status: 'Users table check failed', 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -771,6 +805,65 @@ app.post('/api/chat', logActivity('chat_message'), async (req, res) => {
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: 'Error processing request: ' + error.message });
+  }
+});
+
+// Temporary endpoint to create admin user
+app.post('/api/create-admin', async (req, res) => {
+  try {
+    const bcrypt = require('bcrypt');
+    const { generateToken } = require('./middleware/auth');
+    
+    const adminUsername = 'admin';
+    const adminEmail = 'admin@lisa.com';
+    const adminPassword = 'admin123456';
+    
+    // Check if admin already exists
+    const existingAdmin = await query(`
+      SELECT id FROM users WHERE username = $1 OR email = $2
+    `, [adminUsername, adminEmail]);
+    
+    if (existingAdmin.rows.length > 0) {
+      return res.json({ 
+        message: 'Admin user already exists',
+        credentials: {
+          username: adminUsername,
+          email: adminEmail,
+          password: adminPassword
+        }
+      });
+    }
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    
+    // Create admin user
+    const result = await query(`
+      INSERT INTO users (username, email, password_hash, role, status)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id, username, email, role, status, created_at
+    `, [adminUsername, adminEmail, hashedPassword, 'admin', 'active']);
+    
+    const adminUser = result.rows[0];
+    const token = generateToken(adminUser);
+    
+    res.json({
+      message: 'Admin user created successfully',
+      user: adminUser,
+      token: token,
+      credentials: {
+        username: adminUsername,
+        email: adminEmail,
+        password: adminPassword
+      }
+    });
+    
+  } catch (error) {
+    console.error('Admin creation error:', error);
+    res.status(500).json({ 
+      error: 'Failed to create admin user',
+      details: error.message
+    });
   }
 });
 
