@@ -5,6 +5,7 @@ const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
+const bcrypt = require('bcrypt');
 require('dotenv').config();
 
 // Import database query function
@@ -811,7 +812,6 @@ app.post('/api/chat', logActivity('chat_message'), async (req, res) => {
 // Temporary endpoint to create admin user
 app.post('/api/create-admin', async (req, res) => {
   try {
-    const bcrypt = require('bcrypt');
     const { generateToken } = require('./middleware/auth');
     
     const adminUsername = 'admin';
