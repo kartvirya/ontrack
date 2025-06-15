@@ -405,6 +405,15 @@ const AdminDashboard = () => {
     setSuccess('');
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout(navigate);
+      // Note: We don't add notification here since user will be redirected
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -461,7 +470,7 @@ d              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 
               Back to Chat
               </button>
               <button
-              onClick={logout}
+              onClick={handleLogout}
               className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
             >
               Logout

@@ -104,7 +104,7 @@ const AuthPage = () => {
             type: 'success',
             title: 'Welcome back!',
             message: `Successfully logged in as ${result.user.username}`,
-            duration: 3000
+            duration: 4000
           });
           navigate(from, { replace: true });
         } else {
@@ -125,7 +125,7 @@ const AuthPage = () => {
             type: 'success',
             title: 'Account created!',
             message: `Welcome ${result.user.username}! Registration successful.`,
-            duration: 3000
+            duration: 4000
           });
           navigate(from, { replace: true });
         } else {
@@ -141,7 +141,7 @@ const AuthPage = () => {
         type: 'error',
         title: mode === 'login' ? 'Login Failed' : mode === 'register' ? 'Registration Failed' : 'Error',
         message: error.message || 'An unexpected error occurred',
-        duration: 5000
+        duration: 6000
       });
     } finally {
       setIsLoading(false);

@@ -13,6 +13,7 @@ const UserProfile = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   const { getAuthHeaders, API_URL, user, logout, isAuthenticated } = useAuth();
   const { addNotification } = useNotifications();
@@ -122,6 +123,29 @@ const UserProfile = () => {
     setSuccess('');
   };
 
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout(navigate);
+      addNotification({
+        type: 'success',
+        title: 'Logged Out',
+        message: 'You have been successfully logged out',
+        duration: 4000
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      addNotification({
+        type: 'error',
+        title: 'Logout Error', 
+        message: 'There was an issue logging out, but you have been signed out locally',
+        duration: 5000
+      });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   if (!isAuthenticated()) {
     return null; // Will redirect in useEffect
   }
@@ -178,10 +202,18 @@ const UserProfile = () => {
                 <div className="text-xs text-gray-500">Account Settings</div>
               </div>
               <button
-                onClick={logout}
-                className="px-4 py-2 text-sm bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium border border-red-200"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="px-4 py-2 text-sm bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Logout
+                {isLoggingOut ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    Logging out...
+                  </>
+                ) : (
+                  'Logout'
+                )}
               </button>
             </div>
           </div>

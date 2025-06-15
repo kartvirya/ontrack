@@ -14,6 +14,7 @@ const ChatInterface = () => {
   const [threadId, setThreadId] = useState(null);
   const [imagePopup, setImagePopup] = useState(null);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const { user, isAuthenticated, isAdmin, logout, getAuthHeaders, API_URL } = useAuth();
   const { addNotification } = useNotifications();
@@ -29,6 +30,15 @@ const ChatInterface = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Clear chat state when user logs out
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      setMessages([]);
+      setThreadId(null);
+      setShowSidebar(false);
+    }
+  }, [isAuthenticated]);
 
   // Save conversation to backend when messages change
   const saveConversation = useCallback(async () => {
@@ -187,6 +197,29 @@ const ChatInterface = () => {
 
   const handleAuthClick = () => {
     navigate('/auth');
+  };
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout(navigate);
+      addNotification({
+        type: 'success',
+        title: 'Logged Out',
+        message: 'You have been successfully logged out',
+        duration: 4000
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      addNotification({
+        type: 'error',
+        title: 'Logout Error',
+        message: 'There was an issue logging out, but you have been signed out locally',
+        duration: 5000
+      });
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   // Function to render message content with clickable images and formatted tables
@@ -393,10 +426,18 @@ const ChatInterface = () => {
                   </button>
                 )}
                   <button
-                    onClick={logout}
-                  className="px-4 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium border border-red-200"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="px-4 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    Logout
+                    {isLoggingOut ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                        Logging out...
+                      </>
+                    ) : (
+                      'Logout'
+                    )}
                   </button>
               </>
               ) : (

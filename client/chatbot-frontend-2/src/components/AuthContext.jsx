@@ -133,11 +133,36 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async (navigate = null) => {
+    try {
+      // Call backend logout endpoint if we have a token
+      if (token) {
+        await fetch(`${API_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Logout API call failed:', error);
+      // Continue with local logout even if backend call fails
+    }
+
+    // Clear local storage and state
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken(null);
     setUser(null);
+
+    // Navigate to auth page if navigate function is provided
+    if (navigate) {
+      navigate('/auth', { replace: true });
+    } else {
+      // Force a page refresh to ensure all components reset properly
+      window.location.href = '/auth';
+    }
   };
 
   const isAuthenticated = () => {
