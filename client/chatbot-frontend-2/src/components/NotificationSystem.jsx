@@ -64,7 +64,7 @@ const NotificationContainer = () => {
   const { notifications, removeNotification } = useNotifications();
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-3 max-w-sm">
+    <div className="fixed top-4 right-4 z-50 space-y-3 max-w-lg">
       {notifications.map(notification => (
         <NotificationItem
           key={notification.id}
@@ -143,43 +143,48 @@ const NotificationItem = ({ notification, onClose }) => {
       `}
     >
       <div className="p-5">
-        <div className="flex items-start">
-          <div className="flex-shrink-0 mt-0.5">
-            <div className="w-6 h-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-              {getIcon()}
-            </div>
-          </div>
-          <div className="ml-4 w-0 flex-1">
-            {notification.title && (
-              <p className="text-base font-semibold leading-tight mb-1">
-                {notification.title}
-              </p>
-            )}
-            <p className={`text-sm leading-relaxed ${notification.title ? '' : 'font-medium'} opacity-95`}>
-              {notification.message}
-            </p>
-            {notification.action && (
-              <div className="mt-3">
-                <button
-                  onClick={notification.action.onClick}
-                  className="text-sm font-medium underline hover:no-underline bg-white bg-opacity-20 px-3 py-1 rounded-lg hover:bg-opacity-30 transition-all"
-                >
-                  {notification.action.label}
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="ml-3 flex-shrink-0 flex">
-            <button
-              onClick={handleClose}
-              className="inline-flex text-white hover:text-gray-200 focus:outline-none bg-white bg-opacity-0 hover:bg-opacity-20 rounded-lg p-1.5 transition-all"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
+      <div className="flex items-start max-w-xl w-full bg-white/10 p-4 rounded-xl shadow-lg backdrop-blur-md border border-white/10">
+  <div className="flex-shrink-0 mt-1">
+    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+      {getIcon()}
+    </div>
+  </div>
+
+  <div className="ml-4 flex-1 min-w-0">
+    {notification.title && (
+      <p className="text-base font-semibold leading-snug text-white mb-1 truncate">
+        {notification.title}
+      </p>
+    )}
+
+    <p className={`text-sm text-white/90 leading-relaxed ${notification.title ? '' : 'font-medium'}`}>
+      {notification.message}
+    </p>
+
+    {notification.action && (
+      <div className="mt-3">
+        <button
+          onClick={notification.action.onClick}
+          className="text-sm font-medium text-white underline hover:no-underline bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-all"
+        >
+          {notification.action.label}
+        </button>
+      </div>
+    )}
+  </div>
+
+  <div className="ml-4 flex-shrink-0">
+    <button
+      onClick={handleClose}
+      className="text-white hover:text-gray-200 focus:outline-none bg-white/0 hover:bg-white/20 rounded-full p-1.5 transition-all"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+</div>
+
       </div>
     </div>
   );

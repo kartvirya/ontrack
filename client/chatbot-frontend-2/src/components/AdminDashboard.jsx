@@ -438,22 +438,19 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">  
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
+      <div className="bg-gray-100 border-b border-gray-200 shadow-sm">
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center h-12 space-x-2">
 d                <img 
                   src="/Lisa Logo.png" 
                   alt="LISA" 
-                  className="w-6 h-6 object-contain lisa-logo"
+                  className="h-full object-contain lisa-logo"
                   onError={(e) => {
                     e.target.style.display = 'none';
                     e.target.parentElement.innerHTML = '<span class="text-blue-600 font-bold text-sm">L</span>';
                   }}
                 />
-d              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                LISA
-              </h1>
             </div>
           </div>
           <div className="flex items-center space-x-4">
