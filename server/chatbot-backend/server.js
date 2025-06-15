@@ -5,7 +5,7 @@ const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 // Import database query function
