@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_URL } from '../config/api';
 
 const AuthContext = createContext();
 
@@ -15,14 +16,8 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-  
   // Debug logging
-  console.log('AuthContext API_URL:', API_URL);
-  console.log('Environment variables:', {
-    REACT_APP_API_URL: process.env.REACT_APP_API_URL,
-    NODE_ENV: process.env.NODE_ENV
-  });
+  console.log('AuthContext using API_URL:', API_URL);
 
   // Check if user is authenticated on app load
   useEffect(() => {
