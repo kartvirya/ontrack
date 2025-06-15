@@ -16,6 +16,13 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+  
+  // Debug logging
+  console.log('AuthContext API_URL:', API_URL);
+  console.log('Environment variables:', {
+    REACT_APP_API_URL: process.env.REACT_APP_API_URL,
+    NODE_ENV: process.env.NODE_ENV
+  });
 
   // Check if user is authenticated on app load
   useEffect(() => {

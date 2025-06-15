@@ -51,6 +51,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Debug endpoint to log incoming requests
+app.use('/api/*', (req, res, next) => {
+  console.log(`API Request: ${req.method} ${req.originalUrl} from ${req.get('origin') || 'unknown origin'}`);
+  next();
+});
+
 // Database test endpoint
 app.get('/api/db-test', async (req, res) => {
   try {
