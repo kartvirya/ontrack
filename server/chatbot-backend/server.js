@@ -1028,6 +1028,44 @@ app.post('/api/test-conversation-save', async (req, res) => {
   }
 });
 
+// Debug endpoint to check user_activity table structure
+app.get('/api/debug-user-activity-schema', async (req, res) => {
+  try {
+    console.log('🔍 Checking user_activity table structure...');
+    
+    // Get user_activity table structure
+    const structure = await query(`
+      SELECT column_name, data_type, is_nullable, column_default
+      FROM information_schema.columns 
+      WHERE table_name = 'user_activity' AND table_schema = 'public'
+      ORDER BY ordinal_position
+    `);
+    
+    console.log('User activity columns:', structure.rows.map(r => r.column_name));
+    
+    // Get sample data
+    const sampleData = await query(`
+      SELECT * FROM user_activity 
+      ORDER BY created_at DESC
+      LIMIT 5
+    `);
+    
+    res.json({ 
+      status: 'User activity table info retrieved', 
+      structure: structure.rows,
+      sampleData: sampleData.rows,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ User activity table check failed:', error);
+    res.status(500).json({ 
+      status: 'User activity table check failed', 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Debug endpoint to check activities data
 app.get('/api/debug-activities', async (req, res) => {
   try {
