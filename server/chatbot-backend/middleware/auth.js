@@ -44,18 +44,131 @@ const logActivity = (action) => {
       const userId = req.user ? req.user.id : null;
       const ipAddress = req.ip || req.connection.remoteAddress;
       const userAgent = req.get('User-Agent');
-      const details = JSON.stringify({
-        url: req.originalUrl,
-        method: req.method,
-        body: req.method === 'POST' ? req.body : undefined
-      });
+      
+      // Create user-friendly descriptions based on action
+      let readableDetails = '';
+      
+      switch (action) {
+        case 'admin_view_activities':
+          readableDetails = 'Viewed system activities dashboard';
+          break;
+        case 'admin_view_vector_stores':
+          readableDetails = 'Viewed vector stores management page';
+          break;
+        case 'admin_view_assistants':
+          readableDetails = 'Viewed AI assistants management page';
+          break;
+        case 'admin_view_users':
+          readableDetails = 'Viewed users management page';
+          break;
+        case 'admin_view_stats':
+          readableDetails = 'Viewed system statistics dashboard';
+          break;
+        case 'user_update_settings':
+          readableDetails = 'Updated user profile settings';
+          break;
+        case 'user_login':
+          readableDetails = 'Successfully logged into the system';
+          break;
+        case 'user_logout':
+          readableDetails = 'Logged out from the system';
+          break;
+        case 'admin_create_user':
+          readableDetails = 'Created a new user account';
+          break;
+        case 'admin_delete_user':
+          readableDetails = 'Deleted a user account';
+          break;
+        case 'admin_update_user_status':
+          readableDetails = 'Updated user account status';
+          break;
+        case 'admin_assign_assistant':
+          readableDetails = 'Assigned AI assistant to user';
+          break;
+        case 'admin_remove_assistant':
+          readableDetails = 'Removed AI assistant from user';
+          break;
+        case 'admin_create_assistant':
+          readableDetails = 'Created new AI assistant';
+          break;
+        case 'admin_update_assistant':
+          readableDetails = 'Updated AI assistant configuration';
+          break;
+        case 'admin_delete_assistant':
+          readableDetails = 'Deleted AI assistant';
+          break;
+        case 'admin_create_vector_store':
+          readableDetails = 'Created new document vector store';
+          break;
+        case 'admin_update_vector_store':
+          readableDetails = 'Updated vector store configuration';
+          break;
+        case 'admin_delete_vector_store':
+          readableDetails = 'Deleted document vector store';
+          break;
+        case 'chat_message_sent':
+          readableDetails = 'Sent message in chat conversation';
+          break;
+        case 'chat_history_save':
+          readableDetails = 'Saved chat conversation';
+          break;
+        case 'chat_history_load':
+          readableDetails = 'Loaded chat conversation history';
+          break;
+        case 'file_upload':
+          readableDetails = 'Uploaded file to vector store';
+          break;
+        case 'file_delete':
+          readableDetails = 'Deleted file from vector store';
+          break;
+        case 'table_recreated':
+          readableDetails = 'Database table structure was recreated';
+          break;
+        case 'system_health_check':
+          readableDetails = 'Performed system health check';
+          break;
+        case 'admin_bulk_update_instructions':
+          readableDetails = 'Updated instructions for multiple assistants';
+          break;
+        case 'admin_view_system_settings':
+          readableDetails = 'Viewed system configuration settings';
+          break;
+        case 'admin_update_system_setting':
+          readableDetails = 'Updated system configuration setting';
+          break;
+        case 'admin_create_system_setting':
+          readableDetails = 'Created new system configuration setting';
+          break;
+        default:
+          // For unknown actions, create a readable version
+          readableDetails = action
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, l => l.toUpperCase())
+            .replace(/Api/g, 'API')
+            .replace(/Ai/g, 'AI');
+      }
+
+      // Add context information if available
+      if (req.method && req.originalUrl) {
+        const urlParts = req.originalUrl.split('/');
+        const lastPart = urlParts[urlParts.length - 1];
+        
+        // Add specific resource information if available
+        if (lastPart && lastPart !== 'api' && !lastPart.includes('?')) {
+          if (lastPart.match(/^\d+$/)) {
+            readableDetails += ` (ID: ${lastPart})`;
+          } else if (lastPart.length < 50 && !lastPart.includes('%')) {
+            readableDetails += ` (${lastPart})`;
+          }
+        }
+      }
 
       // Try to log activity, but don't fail if table doesn't exist
       try {
         await query(`
           INSERT INTO user_activity (user_id, action, details, ip_address, user_agent)
           VALUES ($1, $2, $3, $4, $5)
-        `, [userId, action, details, ipAddress, userAgent]);
+        `, [userId, action, readableDetails, ipAddress, userAgent]);
       } catch (dbError) {
         // Log the error but don't fail the request
         console.warn('Activity logging failed (table may not exist):', dbError.message);
