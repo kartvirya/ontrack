@@ -1509,8 +1509,8 @@ const EditVectorStoreModal = ({ store, onClose, onSubmit }) => {
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
         <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
           <div>
-            <h3 className="text-xl font-semibold text-gray-900">Add New User</h3>
-            <p className="text-sm text-gray-600 mt-1">Create a new user account</p>
+            <h3 className="text-xl font-semibold text-gray-900">Edit Vector Store</h3>
+            <p className="text-sm text-gray-600 mt-1">Update vector store configuration</p>
           </div>
           <button 
             onClick={onClose} 
@@ -1524,65 +1524,25 @@ const EditVectorStoreModal = ({ store, onClose, onSubmit }) => {
         
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Store Name</label>
             <input
               type="text"
-              value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value})}
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-              placeholder="Enter username..."
+              placeholder="Enter vector store name..."
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-              placeholder="Enter email address..."
-              required
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 h-24 text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors resize-none"
+              placeholder="Describe what this vector store contains..."
             />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-              placeholder="Enter password..."
-              required
-              minLength={6}
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({...formData, role: e.target.value})}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-            >
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData({...formData, status: e.target.value})}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-            >
-              <option value="active">Active</option>
-              <option value="suspended">Suspended</option>
-              <option value="inactive">Inactive</option>
-            </select>
           </div>
           
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
@@ -1597,7 +1557,7 @@ const EditVectorStoreModal = ({ store, onClose, onSubmit }) => {
               type="submit"
               className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-colors font-medium shadow-sm"
             >
-              Create User
+              Update Vector Store
             </button>
           </div>
         </form>
