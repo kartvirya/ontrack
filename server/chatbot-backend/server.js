@@ -991,7 +991,28 @@ app.get('/api/test-openai', async (req, res) => {
   }
 });
 
+// Auto-fix production database on startup
+async function initializeProductionDatabase() {
+  if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
+    try {
+      console.log('🔧 Checking production database...');
+      const { fixProductionDatabase } = require('./scripts/fix-production-db');
+      await fixProductionDatabase();
+      console.log('✅ Production database verified/fixed');
+    } catch (error) {
+      console.error('⚠️ Production database fix failed:', error.message);
+      // Don't fail server startup, just log the error
+    }
+  }
+}
+
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+
+// Initialize database before starting server
+(async () => {
+  await initializeProductionDatabase();
+  
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+})();
