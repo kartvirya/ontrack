@@ -46,9 +46,47 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/user', userRoutes);
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+// Enhanced health check endpoint
+app.get('/api/health', async (req, res) => {
+  try {
+    // Check database connection
+    const dbCheck = await query('SELECT 1 as test');
+    
+    // Check if critical tables exist
+    const tableChecks = await query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('users', 'conversations', 'user_activity', 'user_settings', 'notifications')
+      ORDER BY table_name
+    `);
+    
+    const tables = tableChecks.rows.map(row => row.table_name);
+    const missingTables = ['users', 'conversations', 'user_activity', 'user_settings', 'notifications']
+      .filter(table => !tables.includes(table));
+    
+    res.json({ 
+      status: missingTables.length === 0 ? 'healthy' : 'degraded',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: {
+        connected: true,
+        tables: tables,
+        missingTables: missingTables,
+        totalTables: tables.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: {
+        connected: false,
+        error: error.message
+      }
+    });
+  }
 });
 
 // Debug endpoint to log incoming requests
@@ -873,70 +911,110 @@ app.post('/api/create-admin', async (req, res) => {
   }
 });
 
-// Temporary endpoint to fix database schema
-app.post('/api/fix-schema', async (req, res) => {
+// Manual production database fix endpoint
+app.post('/api/fix-production-database', async (req, res) => {
   try {
+    console.log('🔧 Manual production database fix triggered...');
     const fixes = [];
     
-    // Add missing columns to users table
-    try {
-      await query(`
-        ALTER TABLE users 
-        ADD COLUMN IF NOT EXISTS openai_assistant_id VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS vector_store_id VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS reset_token_expiry TIMESTAMP
-      `);
-      fixes.push('Added missing columns to users table');
-    } catch (error) {
-      fixes.push(`Users table fix failed: ${error.message}`);
-    }
+    // Check if user_activity table exists
+    const userActivityCheck = await query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name = 'user_activity'
+    `);
     
-    // Create user_activity table if it doesn't exist
-    try {
+    if (userActivityCheck.rows.length === 0) {
+      console.log('❌ user_activity table missing - creating now...');
+      
+      // Create user_activity table
       await query(`
-        CREATE TABLE IF NOT EXISTS user_activity (
+        CREATE TABLE user_activity (
           id SERIAL PRIMARY KEY,
-          user_id INTEGER REFERENCES users(id),
-          action VARCHAR(255) NOT NULL,
-          details JSONB,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          action VARCHAR(100) NOT NULL,
+          details TEXT,
           ip_address INET,
           user_agent TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      fixes.push('Created/verified user_activity table');
-    } catch (error) {
-      fixes.push(`User_activity table fix failed: ${error.message}`);
+      fixes.push('✅ user_activity table created');
+      
+      // Create index for performance
+      await query(`
+        CREATE INDEX IF NOT EXISTS idx_user_activity_user_id ON user_activity(user_id)
+      `);
+      fixes.push('✅ Index created on user_activity.user_id');
+    } else {
+      fixes.push('✅ user_activity table already exists');
     }
     
-    // Create user_sessions table if it doesn't exist
-    try {
-      await query(`
-        CREATE TABLE IF NOT EXISTS user_sessions (
-          id SERIAL PRIMARY KEY,
-          user_id INTEGER REFERENCES users(id),
-          session_token VARCHAR(255) UNIQUE NOT NULL,
-          expires_at TIMESTAMP NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-      fixes.push('Created/verified user_sessions table');
-    } catch (error) {
-      fixes.push(`User_sessions table fix failed: ${error.message}`);
-    }
+    // Create user_settings table
+    await query(`
+      CREATE TABLE IF NOT EXISTS user_settings (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        theme VARCHAR(20) DEFAULT 'light',
+        chat_sound_enabled BOOLEAN DEFAULT true,
+        email_notifications BOOLEAN DEFAULT true,
+        push_notifications BOOLEAN DEFAULT true,
+        auto_save_conversations BOOLEAN DEFAULT true,
+        conversation_retention_days INTEGER DEFAULT 365,
+        default_assistant_model VARCHAR(50) DEFAULT 'gpt-4-1106-preview',
+        sidebar_collapsed BOOLEAN DEFAULT false,
+        show_timestamps BOOLEAN DEFAULT true,
+        compact_mode BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    fixes.push('✅ user_settings table verified');
+    
+    // Create notifications table
+    await query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(50) DEFAULT 'info',
+        read_status BOOLEAN DEFAULT false,
+        action_url VARCHAR(255),
+        expires_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    fixes.push('✅ notifications table verified');
+    
+    // Create necessary indexes
+    await query(`CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_notifications_read_status ON notifications(read_status)`);
+    fixes.push('✅ All indexes created');
+    
+    // Check final table count
+    const tableCount = await query(`
+      SELECT COUNT(*) as count 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    `);
+    
+    console.log('✅ Production database fix completed successfully!');
     
     res.json({
-      message: 'Database schema fixes applied',
+      message: 'Production database fixed successfully',
       fixes: fixes,
+      totalTables: tableCount.rows[0].count,
       timestamp: new Date().toISOString()
     });
     
   } catch (error) {
-    console.error('Schema fix error:', error);
+    console.error('❌ Production database fix failed:', error);
     res.status(500).json({ 
-      error: 'Failed to fix database schema',
-      details: error.message
+      error: 'Failed to fix production database',
+      details: error.message,
+      timestamp: new Date().toISOString()
     });
   }
 });
