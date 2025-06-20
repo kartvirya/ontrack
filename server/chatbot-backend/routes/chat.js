@@ -211,17 +211,36 @@ router.post('/history', logActivity('chat_history_save'), async (req, res) => {
           assistantType: message.assistant_type || message.assistantType || null
         });
         
-        await client.query(`
-          INSERT INTO conversation_messages 
-          (conversation_id, role, content, train_part_data, assistant_type, created_at)
-          VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
-        `, [
-          conversationId,
-          message.role,
-          message.content,
-          trainPartData,
-          message.assistant_type || message.assistantType || null
-        ]);
+        // Try with train_part_data first, fallback without it if column doesn't exist
+        try {
+          await client.query(`
+            INSERT INTO conversation_messages 
+            (conversation_id, role, content, train_part_data, assistant_type, created_at)
+            VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+          `, [
+            conversationId,
+            message.role,
+            message.content,
+            trainPartData,
+            message.assistant_type || message.assistantType || null
+          ]);
+        } catch (insertError) {
+          // If column doesn't exist, try without train_part_data and assistant_type
+          if (insertError.code === '42703') { // undefined column
+            console.log('⚠️ Column missing, trying minimal insert for message:', i + 1);
+            await client.query(`
+              INSERT INTO conversation_messages 
+              (conversation_id, role, content, created_at)
+              VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+            `, [
+              conversationId,
+              message.role,
+              message.content
+            ]);
+          } else {
+            throw insertError;
+          }
+        }
         
       } catch (messageError) {
         console.error(`❌ Failed to insert message ${i + 1}:`, messageError);
