@@ -20,9 +20,9 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: OPENAI_API_KEY
-        value: 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
+        sync: false
       - key: ASSISTANT_ID
-        value: asst_OLv0IF7JHeyILkkxFRSBMKiC
+        sync: false
       - key: FRONTEND_URL
         value: https://lisa-frontend-yrg6.onrender.com
       - key: CORS_ORIGIN
