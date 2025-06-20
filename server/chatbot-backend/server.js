@@ -143,6 +143,50 @@ app.get('/api/db-schema', async (req, res) => {
   }
 });
 
+// Temporary endpoint to check conversations table structure
+app.get('/api/db-conversations', async (req, res) => {
+  try {
+    // Get conversations table structure
+    const conversationsStructure = await query(`
+      SELECT column_name, data_type, is_nullable, column_default
+      FROM information_schema.columns 
+      WHERE table_name = 'conversations' AND table_schema = 'public'
+      ORDER BY ordinal_position
+    `);
+    
+    // Get conversation_messages table structure
+    const messagesStructure = await query(`
+      SELECT column_name, data_type, is_nullable, column_default
+      FROM information_schema.columns 
+      WHERE table_name = 'conversation_messages' AND table_schema = 'public'
+      ORDER BY ordinal_position
+    `);
+    
+    // Get sample conversation data
+    const sampleConversations = await query(`
+      SELECT id, user_id, thread_id, title, message_count, created_at, updated_at
+      FROM conversations 
+      ORDER BY created_at DESC
+      LIMIT 5
+    `);
+    
+    res.json({ 
+      status: 'Conversations table info retrieved', 
+      conversationsStructure: conversationsStructure.rows,
+      messagesStructure: messagesStructure.rows,
+      sampleData: sampleConversations.rows,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Conversations table check failed:', error);
+    res.status(500).json({ 
+      status: 'Conversations table check failed', 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Temporary endpoint to check users table structure
 app.get('/api/db-users', async (req, res) => {
   try {
