@@ -154,6 +154,43 @@ async function initializeDatabase() {
     `);
     console.log('✅ User Profiles table created/verified');
 
+    // User Settings table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_settings (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        theme VARCHAR(20) DEFAULT 'light',
+        chat_sound_enabled BOOLEAN DEFAULT true,
+        email_notifications BOOLEAN DEFAULT true,
+        push_notifications BOOLEAN DEFAULT true,
+        auto_save_conversations BOOLEAN DEFAULT true,
+        conversation_retention_days INTEGER DEFAULT 365,
+        default_assistant_model VARCHAR(50) DEFAULT 'gpt-4-1106-preview',
+        sidebar_collapsed BOOLEAN DEFAULT false,
+        show_timestamps BOOLEAN DEFAULT true,
+        compact_mode BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ User Settings table created/verified');
+
+    // Notifications table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(50) DEFAULT 'info',
+        read_status BOOLEAN DEFAULT false,
+        action_url VARCHAR(255),
+        expires_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ Notifications table created/verified');
+
     // Password Reset Tokens table
     await client.query(`
       CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -185,6 +222,9 @@ async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_user_sessions_session_token ON user_sessions(session_token);
       CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);
       CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at);
+      CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
+      CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+      CREATE INDEX IF NOT EXISTS idx_notifications_read_status ON notifications(read_status);
     `);
     console.log('✅ Database indexes created');
 
@@ -239,10 +279,18 @@ async function initializeDatabase() {
         EXECUTE FUNCTION update_updated_at_column();
     `);
 
+    await client.query(`
+      DROP TRIGGER IF EXISTS update_user_settings_updated_at ON user_settings;
+      CREATE TRIGGER update_user_settings_updated_at
+        BEFORE UPDATE ON user_settings
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+    `);
+
     console.log('✅ Database triggers created');
     
     console.log('✅ Database initialized successfully!');
-    console.log('✅ Tables created: users, openai_assistants, vector_stores, conversations, conversation_messages, user_activity, user_sessions, activity_logs, user_profiles, password_reset_tokens');
+    console.log('✅ Tables created: users, openai_assistants, vector_stores, conversations, conversation_messages, user_activity, user_sessions, activity_logs, user_profiles, user_settings, notifications, password_reset_tokens');
     console.log('✅ Indexes created for optimal performance');
     console.log('✅ Triggers created for automatic timestamp updates');
     
