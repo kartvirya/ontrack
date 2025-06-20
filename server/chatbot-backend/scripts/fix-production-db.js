@@ -51,7 +51,51 @@ async function fixProductionDatabase() {
       `);
       console.log('✅ Index created on user_activity.created_at');
     } else {
-      console.log('✅ user_activity table already exists');
+      console.log('🔍 user_activity table exists - checking structure...');
+      
+      // Check if the table has the correct columns
+      const columnCheck = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'user_activity' AND table_schema = 'public'
+        ORDER BY ordinal_position
+      `);
+      
+      const columns = columnCheck.rows.map(r => r.column_name);
+      console.log('Current user_activity columns:', columns);
+      
+      if (!columns.includes('action')) {
+        console.log('⚠️ user_activity table missing required columns, recreating...');
+        
+        // Drop and recreate with correct structure
+        await client.query('DROP TABLE IF EXISTS user_activity CASCADE');
+        await client.query(`
+          CREATE TABLE user_activity (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            action VARCHAR(100) NOT NULL,
+            details TEXT,
+            ip_address INET,
+            user_agent TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        console.log('✅ user_activity table recreated with correct structure');
+        
+        // Create index for performance
+        await client.query(`
+          CREATE INDEX IF NOT EXISTS idx_user_activity_user_id ON user_activity(user_id)
+        `);
+        console.log('✅ Index created on user_activity.user_id');
+        
+        // Create index on created_at for performance
+        await client.query(`
+          CREATE INDEX IF NOT EXISTS idx_user_activity_created_at ON user_activity(created_at)
+        `);
+        console.log('✅ Index created on user_activity.created_at');
+      } else {
+        console.log('✅ user_activity table structure verified');
+      }
     }
     
     // Also ensure other critical tables exist
