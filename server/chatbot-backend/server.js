@@ -1123,6 +1123,65 @@ app.get('/api/debug-activities', async (req, res) => {
   }
 });
 
+// Force recreate user_activity table
+app.post('/api/recreate-user-activity', async (req, res) => {
+  try {
+    console.log('🔧 Force recreating user_activity table...');
+    
+    // Drop the table completely
+    await query('DROP TABLE IF EXISTS user_activity CASCADE');
+    console.log('✅ Dropped user_activity table');
+    
+    // Create the table with correct structure
+    await query(`
+      CREATE TABLE user_activity (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        action VARCHAR(100) NOT NULL,
+        details TEXT,
+        ip_address INET,
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ Created user_activity table with correct structure');
+    
+    // Create indexes
+    await query('CREATE INDEX IF NOT EXISTS idx_user_activity_user_id ON user_activity(user_id)');
+    await query('CREATE INDEX IF NOT EXISTS idx_user_activity_created_at ON user_activity(created_at)');
+    console.log('✅ Created indexes');
+    
+    // Insert a test activity
+    await query(`
+      INSERT INTO user_activity (user_id, action, details, ip_address, user_agent)
+      VALUES (5, 'table_recreated', 'User activity table was recreated', '127.0.0.1', 'API-Fix')
+    `);
+    console.log('✅ Inserted test activity');
+    
+    // Verify structure
+    const columns = await query(`
+      SELECT column_name, data_type
+      FROM information_schema.columns 
+      WHERE table_name = 'user_activity' AND table_schema = 'public'
+      ORDER BY ordinal_position
+    `);
+    
+    res.json({
+      message: 'User activity table recreated successfully',
+      columns: columns.rows,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to recreate user_activity table:', error);
+    res.status(500).json({
+      error: 'Failed to recreate table',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Fix user_activity table structure specifically
 app.post('/api/fix-user-activity-table', async (req, res) => {
   try {
