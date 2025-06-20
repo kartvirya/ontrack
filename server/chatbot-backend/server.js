@@ -1028,6 +1028,32 @@ app.post('/api/test-conversation-save', async (req, res) => {
   }
 });
 
+// Schema fix endpoint for conversations table
+app.post('/api/fix-schema', async (req, res) => {
+  try {
+    const { fixProductionSchema } = require('./scripts/fix-production-schema');
+    console.log('🔧 Running production schema fix...');
+    
+    const result = await fixProductionSchema();
+    
+    res.json({
+      success: true,
+      message: 'Production schema fixed successfully',
+      details: result,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Schema fix failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Schema fix failed',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Manual production database fix endpoint
 app.post('/api/fix-production-database', async (req, res) => {
   try {
