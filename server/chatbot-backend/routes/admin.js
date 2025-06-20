@@ -1022,17 +1022,34 @@ router.get('/vector-stores/:storeId/analytics', logActivity('admin_view_vector_s
 // Get recent activities
 router.get('/activities', logActivity('admin_view_activities'), async (req, res) => {
   try {
+    const { limit = 100, offset = 0 } = req.query;
+    
     const result = await query(`
       SELECT 
-        al.action, al.details, al.ip_address, al.created_at,
+        ua.action, 
+        ua.details, 
+        ua.ip_address, 
+        ua.user_agent, 
+        ua.created_at,
         u.username
-      FROM activity_logs al
-      LEFT JOIN users u ON al.user_id = u.id
-      ORDER BY al.created_at DESC
-      LIMIT 100
+      FROM user_activity ua
+      LEFT JOIN users u ON ua.user_id = u.id
+      ORDER BY ua.created_at DESC
+      LIMIT $1 OFFSET $2
+    `, [parseInt(limit), parseInt(offset)]);
+    
+    // Get total count for pagination
+    const countResult = await query(`
+      SELECT COUNT(*) as total
+      FROM user_activity
     `);
     
-    res.json({ activities: result.rows });
+    res.json({ 
+      activities: result.rows,
+      total: parseInt(countResult.rows[0].total),
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
   } catch (error) {
     console.error('Error fetching activities:', error);
     res.status(500).json({ error: 'Database error' });
@@ -1059,7 +1076,7 @@ router.get('/stats', logActivity('admin_view_stats'), async (req, res) => {
       SELECT 
         COUNT(*) as total_activities,
         COUNT(DISTINCT user_id) as active_users_30d
-      FROM activity_logs 
+      FROM user_activity 
       WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
     `);
     
