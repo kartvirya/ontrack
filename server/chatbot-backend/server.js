@@ -1123,6 +1123,69 @@ app.get('/api/debug-activities', async (req, res) => {
   }
 });
 
+// Fix user_activity table structure specifically
+app.post('/api/fix-user-activity-table', async (req, res) => {
+  try {
+    console.log('🔧 Fixing user_activity table structure...');
+    
+    // First check current table structure
+    const currentStructure = await query(`
+      SELECT column_name, data_type
+      FROM information_schema.columns 
+      WHERE table_name = 'user_activity' AND table_schema = 'public'
+      ORDER BY ordinal_position
+    `);
+    
+    console.log('Current user_activity columns:', currentStructure.rows.map(r => r.column_name));
+    
+    // Drop and recreate the table with correct structure
+    await query('DROP TABLE IF EXISTS user_activity CASCADE');
+    console.log('✅ Dropped existing user_activity table');
+    
+    // Create the table with correct structure
+    await query(`
+      CREATE TABLE user_activity (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        action VARCHAR(100) NOT NULL,
+        details TEXT,
+        ip_address INET,
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ Created user_activity table with correct structure');
+    
+    // Create index for performance
+    await query('CREATE INDEX IF NOT EXISTS idx_user_activity_user_id ON user_activity(user_id)');
+    await query('CREATE INDEX IF NOT EXISTS idx_user_activity_created_at ON user_activity(created_at)');
+    console.log('✅ Created indexes');
+    
+    // Verify the new structure
+    const newStructure = await query(`
+      SELECT column_name, data_type
+      FROM information_schema.columns 
+      WHERE table_name = 'user_activity' AND table_schema = 'public'
+      ORDER BY ordinal_position
+    `);
+    
+    res.json({
+      message: 'User activity table fixed successfully',
+      oldColumns: currentStructure.rows.map(r => r.column_name),
+      newColumns: newStructure.rows.map(r => r.column_name),
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ User activity table fix failed:', error);
+    res.status(500).json({
+      error: 'Failed to fix user_activity table',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Schema fix endpoint for conversations table
 app.post('/api/fix-schema', async (req, res) => {
   try {
