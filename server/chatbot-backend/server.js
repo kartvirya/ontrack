@@ -955,6 +955,79 @@ app.post('/api/create-admin', async (req, res) => {
   }
 });
 
+// Test conversation save endpoint to debug production issues
+app.post('/api/test-conversation-save', async (req, res) => {
+  try {
+    console.log('🧪 Testing conversation save in production...');
+    
+    // Test simple database operations
+    const testUser = await query('SELECT id FROM users LIMIT 1');
+    if (testUser.rows.length === 0) {
+      return res.status(400).json({ error: 'No users found for testing' });
+    }
+    
+    const userId = testUser.rows[0].id;
+    const testThreadId = 'test-' + Date.now();
+    const testTitle = 'Test Conversation';
+    const testMessages = [
+      { role: 'user', content: 'Hello, this is a test message' },
+      { role: 'assistant', content: 'Hello! This is a test response.' }
+    ];
+    
+    console.log('Testing with userId:', userId, 'threadId:', testThreadId);
+    
+    // Try to create a conversation
+    const conversationResult = await query(`
+      INSERT INTO conversations (user_id, thread_id, title, message_count, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      RETURNING id
+    `, [userId, testThreadId, testTitle, testMessages.length]);
+    
+    const conversationId = conversationResult.rows[0].id;
+    console.log('Created conversation with ID:', conversationId);
+    
+    // Try to insert messages
+    for (const message of testMessages) {
+      await query(`
+        INSERT INTO conversation_messages 
+        (conversation_id, role, content, assistant_type, created_at)
+        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+      `, [
+        conversationId,
+        message.role,
+        message.content,
+        null
+      ]);
+    }
+    
+    console.log('✅ Test conversation save completed successfully');
+    
+    // Clean up test data
+    await query('DELETE FROM conversation_messages WHERE conversation_id = $1', [conversationId]);
+    await query('DELETE FROM conversations WHERE id = $1', [conversationId]);
+    
+    res.json({
+      message: 'Test conversation save successful',
+      testData: {
+        userId,
+        testThreadId,
+        conversationId,
+        messagesCount: testMessages.length
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Test conversation save failed:', error);
+    res.status(500).json({ 
+      error: 'Test conversation save failed',
+      details: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Manual production database fix endpoint
 app.post('/api/fix-production-database', async (req, res) => {
   try {

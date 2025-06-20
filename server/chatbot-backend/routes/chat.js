@@ -140,7 +140,15 @@ router.post('/history', logActivity('chat_history_save'), async (req, res) => {
     const userId = req.user.id;
     const { threadId, title, messages } = req.body;
     
+    console.log('💾 Saving conversation:', { 
+      userId, 
+      threadId, 
+      title: title?.substring(0, 50), 
+      messageCount: messages?.length 
+    });
+    
     if (!threadId || !messages || !Array.isArray(messages)) {
+      console.log('❌ Invalid request data:', { threadId: !!threadId, messages: Array.isArray(messages) });
       return res.status(400).json({ error: 'Invalid request data' });
     }
 
@@ -181,36 +189,63 @@ router.post('/history', logActivity('chat_history_save'), async (req, res) => {
     }
 
     // Insert messages
-    for (const message of messages) {
-      // Handle both trainPart (frontend format) and train_part_data (database format)
-      let trainPartData = null;
-      if (message.trainPart) {
-        trainPartData = JSON.stringify(message.trainPart);
-      } else if (message.train_part_data) {
-        trainPartData = typeof message.train_part_data === 'string' 
-          ? message.train_part_data 
-          : JSON.stringify(message.train_part_data);
-      }
+    console.log(`📝 Inserting ${messages.length} messages for conversation ${conversationId}`);
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
       
-      await client.query(`
-        INSERT INTO conversation_messages 
-        (conversation_id, role, content, train_part_data, assistant_type, created_at)
-        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
-      `, [
-        conversationId,
-        message.role,
-        message.content,
-        trainPartData,
-        message.assistant_type || message.assistantType || null
-      ]);
+      try {
+        // Handle both trainPart (frontend format) and train_part_data (database format)
+        let trainPartData = null;
+        if (message.trainPart) {
+          trainPartData = JSON.stringify(message.trainPart);
+        } else if (message.train_part_data) {
+          trainPartData = typeof message.train_part_data === 'string' 
+            ? message.train_part_data 
+            : JSON.stringify(message.train_part_data);
+        }
+        
+        console.log(`📄 Inserting message ${i + 1}:`, {
+          role: message.role,
+          contentLength: message.content?.length,
+          hasTrainPart: !!trainPartData,
+          assistantType: message.assistant_type || message.assistantType || null
+        });
+        
+        await client.query(`
+          INSERT INTO conversation_messages 
+          (conversation_id, role, content, train_part_data, assistant_type, created_at)
+          VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+        `, [
+          conversationId,
+          message.role,
+          message.content,
+          trainPartData,
+          message.assistant_type || message.assistantType || null
+        ]);
+        
+      } catch (messageError) {
+        console.error(`❌ Failed to insert message ${i + 1}:`, messageError);
+        throw messageError;
+      }
     }
 
     await client.query('COMMIT');
+    console.log('✅ Conversation saved successfully:', { conversationId, messageCount: messages.length });
     res.json({ message: 'Conversation saved successfully' });
 
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Error saving conversation:', error);
+    console.error('❌ Error saving conversation:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      position: error.position,
+      constraint: error.constraint,
+      column: error.column,
+      table: error.table
+    });
     res.status(500).json({ error: 'Error saving conversation' });
   } finally {
     client.release();
