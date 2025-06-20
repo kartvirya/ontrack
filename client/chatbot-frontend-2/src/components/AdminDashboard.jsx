@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import ThemeToggle from './ThemeToggle';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -416,11 +417,11 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-xl p-8 shadow-xl">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-xl border border-gray-100 dark:border-gray-700 transition-colors duration-300">
           <div className="text-center">
             <div className="animate-spin w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading admin dashboard...</p>
+            <p className="text-gray-600 dark:text-gray-300">Loading admin dashboard...</p>
           </div>
         </div>
       </div>
@@ -436,39 +437,42 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">  
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">  
       {/* Header */}
-      <div className="bg-gray-100 border-b border-gray-200 shadow-sm">
+      <div className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm transition-colors duration-300">
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="flex items-center h-12 space-x-2">
-d                <img 
+                <img 
                   src="/Lisa Logo.png" 
                   alt="LISA" 
                   className="h-full object-contain lisa-logo"
                   onError={(e) => {
                     e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML = '<span class="text-blue-600 font-bold text-sm">L</span>';
+                    e.target.parentElement.innerHTML = '<span class="text-blue-600 dark:text-blue-400 font-bold text-sm">L</span>';
                   }}
                 />
             </div>
           </div>
           <div className="flex items-center space-x-4">
+            {/* Theme Toggle */}
+            <ThemeToggle size="small" />
+            
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-medium text-sm">{user.username?.charAt(0).toUpperCase()}</span>
+              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                <span className="text-blue-600 dark:text-blue-400 font-medium text-sm">{user.username?.charAt(0).toUpperCase()}</span>
               </div>
-              <span className="text-gray-700 font-medium">{user.username}</span>
+              <span className="text-gray-700 dark:text-gray-300 font-medium">{user.username}</span>
             </div>
               <button
               onClick={() => navigate('/')}
-              className="px-4 py-2 text-gray-600 hover:text-blue-600 transition-colors"
+              className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               Back to Chat
               </button>
               <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+              className="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors"
             >
               Logout
               </button>
@@ -479,7 +483,7 @@ d                <img
       {/* Main Content */}
       <div className="flex">
         {/* Sidebar Navigation */}
-        <div className="w-64 bg-white shadow-lg h-screen sticky top-0">
+        <div className="w-64 bg-white dark:bg-gray-800 shadow-lg h-screen sticky top-0 transition-colors duration-300">
           <div className="p-6">
             <nav className="space-y-2">
               {menuItems.map((item) => (
@@ -489,7 +493,7 @@ d                <img
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-left transition-all duration-200 ${
                     activeTab === item.id
                       ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
@@ -517,15 +521,15 @@ d                <img
             {(error || success) && (
               <div className="mb-6">
                 {error && (
-                <div className="p-4 bg-red-50 border-l-4 border-red-400 text-red-700 rounded-lg flex justify-between items-center">
+                <div className="p-4 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 rounded-lg flex justify-between items-center transition-colors duration-300">
                     <span>{error}</span>
-                  <button onClick={clearMessages} className="text-red-500 hover:text-red-700 text-xl">&times;</button>
+                  <button onClick={clearMessages} className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xl transition-colors">&times;</button>
                   </div>
                 )}
                 {success && (
-                <div className="p-4 bg-green-50 border-l-4 border-green-400 text-green-700 rounded-lg flex justify-between items-center">
+                <div className="p-4 bg-green-50 dark:bg-green-900/30 border-l-4 border-green-400 dark:border-green-600 text-green-700 dark:text-green-300 rounded-lg flex justify-between items-center transition-colors duration-300">
                     <span>{success}</span>
-                  <button onClick={clearMessages} className="text-green-500 hover:text-green-700 text-xl">&times;</button>
+                  <button onClick={clearMessages} className="text-green-500 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-xl transition-colors">&times;</button>
                   </div>
                 )}
               </div>
@@ -624,24 +628,24 @@ const DashboardTab = ({ stats, assistants, vectorStores, users }) => {
     <div className="space-y-6">
       {/* System Health Status */}
       {systemHealth && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">System Health</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-colors duration-300">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">System Health</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="flex items-center space-x-3">
               <div className={`w-3 h-3 rounded-full ${systemHealth.database ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm text-gray-700">Database</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Database</span>
                       </div>
             <div className="flex items-center space-x-3">
               <div className={`w-3 h-3 rounded-full ${systemHealth.openai ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm text-gray-700">OpenAI API</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">OpenAI API</span>
                       </div>
             <div className="flex items-center space-x-3">
               <div className={`w-3 h-3 rounded-full ${systemHealth.storage ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm text-gray-700">File Storage</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">File Storage</span>
                     </div>
             <div className="flex items-center space-x-3">
               <div className={`w-3 h-3 rounded-full ${systemHealth.memory < 80 ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
-              <span className="text-sm text-gray-700">Memory ({systemHealth.memory}%)</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Memory ({systemHealth.memory}%)</span>
                   </div>
                       </div>
                       </div>
@@ -649,7 +653,7 @@ const DashboardTab = ({ stats, assistants, vectorStores, users }) => {
                   
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsCards.map((card, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
+          <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all duration-300">
                     <div className="flex items-center">
               <div className={`p-3 rounded-xl bg-gradient-to-r ${colorMap[card.color]} text-white`}>
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -657,31 +661,31 @@ const DashboardTab = ({ stats, assistants, vectorStores, users }) => {
                         </svg>
                       </div>
                       <div className="ml-4">
-                <div className="text-3xl font-bold text-gray-900">{card.value}</div>
-                <div className="text-sm text-gray-600">{card.title}</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{card.value}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">{card.title}</div>
                       </div>
                     </div>
                   </div>
         ))}
                 </div>
                 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">System Overview</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">System Overview</h3>
                   </div>
                   <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{users.filter(u => u.openai_assistant_id).length}</div>
-              <div className="text-sm text-gray-600">Users with Assistants</div>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{users.filter(u => u.openai_assistant_id).length}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">Users with Assistants</div>
                               </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{assistants.filter(a => a.assistant_type === 'shared').length}</div>
-              <div className="text-sm text-gray-600">Shared Assistants</div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">{assistants.filter(a => a.assistant_type === 'shared').length}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">Shared Assistants</div>
                             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{vectorStores.reduce((sum, vs) => sum + (vs.file_count || 0), 0)}</div>
-              <div className="text-sm text-gray-600">Total Files Uploaded</div>
+              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{vectorStores.reduce((sum, vs) => sum + (vs.file_count || 0), 0)}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-300">Total Files Uploaded</div>
                           </div>
                       </div>
                       </div>
@@ -748,36 +752,36 @@ const UsersTab = ({ users, assistants, updateUserStatus, deleteUser, assignAssis
         />
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">User Management</h3>
-          <p className="text-sm text-gray-600 mt-1">Manage user accounts, permissions, and assistant assignments</p>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">User Management</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Manage user accounts, permissions, and assistant assignments</p>
         </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assistant</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Active</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Assistant</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Active</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {users.map((user) => {
                 const userAssistant = assistants.find(a => a.user_id === user.id || user.openai_assistant_id === a.assistant_id);
                 
                 return (
-                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-medium">
                           {user.username?.charAt(0).toUpperCase()}
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{user.username}</div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.username}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
                           {user.role === 'admin' && (
                             <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 mt-1">
                               Admin
@@ -810,7 +814,7 @@ const UsersTab = ({ users, assistants, updateUserStatus, deleteUser, assignAssis
                       </span>
                     )}
                 </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -874,8 +878,8 @@ const AssistantsTab = ({ assistants, vectorStores, showCreateAssistant, setShowC
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">AI Assistants</h3>
-          <p className="text-sm text-gray-600 mt-1">Manage AI assistants and their configurations</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">AI Assistants</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Manage AI assistants and their configurations</p>
         </div>
         <button
           onClick={() => setShowCreateAssistant(true)}
@@ -909,20 +913,20 @@ const AssistantsTab = ({ assistants, vectorStores, showCreateAssistant, setShowC
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {assistants.map((assistant) => (
-          <div key={assistant.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+          <div key={assistant.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-all duration-300">
             <div className="flex justify-between items-start mb-4">
               <div className="flex-1">
-                <h4 className="font-semibold text-gray-900 text-lg">{assistant.assistant_name}</h4>
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-lg">{assistant.assistant_name}</h4>
                 <div className="flex items-center space-x-2 mt-2">
                   <span className={`px-2 py-1 text-xs rounded-full font-medium ${
                     assistant.assistant_type === 'shared' 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : 'bg-green-100 text-green-800'
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' 
+                      : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                   }`}>
                     {assistant.assistant_type}
                   </span>
                   {assistant.user_count > 0 && (
-                    <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
+                    <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full">
                       {assistant.user_count} users
                     </span>
                   )}
@@ -931,13 +935,13 @@ const AssistantsTab = ({ assistants, vectorStores, showCreateAssistant, setShowC
               <div className="flex space-x-2">
                 <button
                   onClick={() => setEditingAssistant(assistant)}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium transition-colors"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => deleteAssistant(assistant.assistant_id)}
-                  className="text-red-600 hover:text-red-800 text-sm font-medium"
+                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm font-medium transition-colors"
                 >
                   Delete
                 </button>
@@ -946,25 +950,25 @@ const AssistantsTab = ({ assistants, vectorStores, showCreateAssistant, setShowC
             
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Model:</span>
-                <span className="text-gray-900 font-medium">{assistant.model}</span>
+                <span className="text-gray-500 dark:text-gray-400">Model:</span>
+                <span className="text-gray-900 dark:text-gray-100 font-medium">{assistant.model}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Vector Store:</span>
-                <span className="text-gray-900 font-medium">
+                <span className="text-gray-500 dark:text-gray-400">Vector Store:</span>
+                <span className="text-gray-900 dark:text-gray-100 font-medium">
                   {assistant.vector_store_name || (assistant.vector_store_id ? 'Connected' : 'None')}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Created:</span>
-                <span className="text-gray-900 font-medium">{new Date(assistant.created_at).toLocaleDateString()}</span>
+                <span className="text-gray-500 dark:text-gray-400">Created:</span>
+                <span className="text-gray-900 dark:text-gray-100 font-medium">{new Date(assistant.created_at).toLocaleDateString()}</span>
               </div>
             </div>
             
             {assistant.instructions && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <span className="text-gray-500 text-sm">Instructions:</span>
-                <p className="text-xs text-gray-700 mt-1 bg-gray-50 p-3 rounded-lg max-h-20 overflow-y-auto">
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <span className="text-gray-500 dark:text-gray-400 text-sm">Instructions:</span>
+                <p className="text-xs text-gray-700 dark:text-gray-300 mt-1 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg max-h-20 overflow-y-auto">
                   {assistant.instructions}
                 </p>
               </div>
@@ -1001,8 +1005,8 @@ const VectorStoresTab = ({ vectorStores, assistants, showCreateVectorStore, setS
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Vector Stores</h3>
-          <p className="text-sm text-gray-600 mt-1">Manage document stores and knowledge bases</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Vector Stores</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Manage document stores and knowledge bases</p>
         </div>
         <button
           onClick={() => setShowCreateVectorStore(true)}
@@ -1072,15 +1076,15 @@ const VectorStoresTab = ({ vectorStores, assistants, showCreateVectorStore, setS
           const connectedAssistants = assistants.filter(assistant => assistant.vector_store_id === store.store_id);
           
   return (
-            <div key={store.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+            <div key={store.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md transition-all duration-300">
               <div className="flex justify-between items-start mb-4">
-                <h4 className="font-semibold text-gray-900 text-lg">{store.store_name}</h4>
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-lg">{store.store_name}</h4>
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                  <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded-full font-medium">
                     {store.file_count || 0} files
                   </span>
                   {connectedAssistants.length > 0 && (
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                    <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full font-medium">
                       {connectedAssistants.length} assistant{connectedAssistants.length !== 1 ? 's' : ''}
                     </span>
                   )}
@@ -1089,15 +1093,15 @@ const VectorStoresTab = ({ vectorStores, assistants, showCreateVectorStore, setS
               
               <div className="space-y-3 text-sm">
             <div className="flex justify-between">
-                  <span className="text-gray-500">Created:</span>
-                  <span className="text-gray-900 font-medium">{new Date(store.created_at).toLocaleDateString()}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Created:</span>
+                  <span className="text-gray-900 dark:text-gray-100 font-medium">{new Date(store.created_at).toLocaleDateString()}</span>
             </div>
                 {connectedAssistants.length > 0 && (
                   <div>
-                    <span className="text-gray-500">Connected Assistants:</span>
+                    <span className="text-gray-500 dark:text-gray-400">Connected Assistants:</span>
                     <div className="mt-2 space-y-1">
                       {connectedAssistants.map(assistant => (
-                        <div key={assistant.assistant_id} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded border">
+                        <div key={assistant.assistant_id} className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded border border-blue-200 dark:border-blue-700">
                           {assistant.assistant_name}
             </div>
                       ))}
@@ -1107,37 +1111,37 @@ const VectorStoresTab = ({ vectorStores, assistants, showCreateVectorStore, setS
         </div>
         
               {store.description && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <span className="text-gray-500 text-sm">Description:</span>
-                  <p className="text-xs text-gray-700 mt-1 bg-gray-50 p-3 rounded-lg">
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <span className="text-gray-500 dark:text-gray-400 text-sm">Description:</span>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 mt-1 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
                     {store.description}
                   </p>
             </div>
               )}
 
               {/* Action Buttons */}
-              <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-2">
                 <button
                   onClick={() => handleViewFiles(store)}
-                  className="text-xs px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                  className="text-xs px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
                 >
                   View Files
                 </button>
                 <button
                   onClick={() => handleAddFiles(store)}
-                  className="text-xs px-3 py-1 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                  className="text-xs px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-lg transition-colors"
                 >
                   Add Files
                 </button>
                 <button
                   onClick={() => setEditingStore(store)}
-                  className="text-xs px-3 py-1 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-lg transition-colors"
+                  className="text-xs px-3 py-1 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 rounded-lg transition-colors"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => deleteVectorStore(store.store_id)}
-                  className="text-xs px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                  className="text-xs px-3 py-1 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors disabled:opacity-50"
                   disabled={connectedAssistants.length > 0}
                   title={connectedAssistants.length > 0 ? 'Cannot delete vector store with connected assistants' : 'Delete vector store'}
                 >
@@ -1168,15 +1172,15 @@ const CreateAssistantModal = ({ vectorStores, onClose, onSubmit }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-        <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden transition-colors duration-300">
+        <div className="flex justify-between items-center p-6 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30">
           <div>
-            <h3 className="text-xl font-semibold text-gray-900">Create New Assistant</h3>
-            <p className="text-sm text-gray-600 mt-1">Set up a new AI assistant for your users</p>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Create New Assistant</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Set up a new AI assistant for your users</p>
           </div>
           <button 
             onClick={onClose} 
-            className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-white rounded-lg"
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors p-2 hover:bg-white dark:hover:bg-gray-700 rounded-lg"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1191,18 +1195,18 @@ const CreateAssistantModal = ({ vectorStores, onClose, onSubmit }) => {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-500 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               placeholder="Enter assistant name..."
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Model</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Model</label>
             <select
               value={formData.model}
               onChange={(e) => setFormData({...formData, model: e.target.value})}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
               <option value="gpt-4-1106-preview">GPT-4 Turbo (Recommended)</option>
               <option value="gpt-4">GPT-4</option>
@@ -1634,35 +1638,35 @@ const AssignAssistantModal = ({ user, assistants, onClose, onSubmit }) => {
 const ActivitiesTab = ({ activities }) => {
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">System Activities</h3>
-          <p className="text-sm text-gray-600 mt-1">Monitor user actions and system events</p>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">System Activities</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Monitor user actions and system events</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Details</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {activities.map((activity, index) => (
-                <tr key={index} className="hover:bg-gray-50 transition-colors">
+                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{activity.username || 'System'}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.username || 'System'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{activity.action}</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{activity.action}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{new Date(activity.created_at).toLocaleDateString()}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{new Date(activity.created_at).toLocaleDateString()}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-700 max-w-xs truncate">{activity.details}</div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300 max-w-xs truncate">{activity.details}</div>
                   </td>
                 </tr>
               ))}

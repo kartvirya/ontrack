@@ -6,6 +6,7 @@ import KeyboardShortcuts from './KeyboardShortcuts';
 import { LoadingButton } from './LoadingSpinner';
 import { useAuth } from './AuthContext';
 import { useNotifications } from './NotificationSystem';
+import ThemeToggle from './ThemeToggle';
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
@@ -344,7 +345,7 @@ const ChatInterface = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
       {/* Keyboard Shortcuts */}
       <KeyboardShortcuts 
         onToggleSidebar={toggleSidebar}
@@ -354,7 +355,7 @@ const ChatInterface = () => {
 
       {/* Chat History Sidebar */}
       {showSidebar && (
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col shadow-lg">
+        <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col shadow-lg">
       <ChatHistory 
         onLoadConversation={handleLoadConversation}
         onNewChat={handleNewChat}
@@ -366,14 +367,14 @@ const ChatInterface = () => {
         {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="bg-slate-100 backdrop-blur-sm border-b border-gray-100 px-6 py-4 flex items-center justify-between shadow-sm">
+        <div className="bg-slate-100 dark:bg-gray-800 backdrop-blur-sm border-b border-gray-100 dark:border-gray-700 px-6 py-4 flex items-center justify-between shadow-sm transition-colors duration-300">
           <div className="flex items-center space-x-4">
                 <button
               onClick={() => toggleSidebar()}
               className={`p-2 rounded-xl transition-all duration-200 ${
                 isAuthenticated() 
-                  ? 'hover:bg-blue-50 text-blue-600 border border-blue-200 shadow-sm' 
-                  : 'hover:bg-gray-100 text-gray-600'
+                  ? 'hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-600 shadow-sm' 
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'
               }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -388,7 +389,7 @@ const ChatInterface = () => {
                   className="h-full object-contain lisa-logo"
                   onError={(e) => {
                     e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML = '<span class="text-blue-600 font-bold text-sm">L</span>';
+                    e.target.parentElement.innerHTML = '<span class="text-blue-600 dark:text-blue-400 font-bold text-sm">L</span>';
                   }}
                 />
               </div>
@@ -396,30 +397,33 @@ const ChatInterface = () => {
             </div>
             
           <div className="flex items-center space-x-3">
+              {/* Theme Toggle Button */}
+              <ThemeToggle size="small" />
+              
               {isAuthenticated() ? (
               <>
-                <div className="flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm text-green-700 font-medium">
+                <div className="flex items-center space-x-2 bg-green-50 dark:bg-green-900/30 px-3 py-2 rounded-lg border border-green-200 dark:border-green-700">
+                  <div className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-green-700 dark:text-green-300 font-medium">
                     {user?.username}
                   </span>
                 </div>
                         <button
                   onClick={() => navigate('/profile')}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   title="Profile"
                         >
-                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                         </button>
                 {isAdmin() && (
                   <button
                     onClick={() => navigate('/admin')}
-                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     title="Admin Panel"
                   >
-                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -428,11 +432,11 @@ const ChatInterface = () => {
                   <button
                     onClick={handleLogout}
                     disabled={isLoggingOut}
-                    className="px-4 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-4 py-2 text-sm bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors font-medium border border-red-200 dark:border-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {isLoggingOut ? (
                       <>
-                        <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-3 h-3 border-2 border-red-600 dark:border-red-400 border-t-transparent rounded-full animate-spin"></div>
                         Logging out...
                       </>
                     ) : (
@@ -452,7 +456,7 @@ const ChatInterface = () => {
           </div>
           
         {/* Messages Area */}
-        <div className="flex-1 overflow-auto bg-slate-100">
+        <div className="flex-1 overflow-auto bg-slate-100 dark:bg-gray-900 transition-colors duration-300">
           <div className="max-w-4xl mx-auto">
               {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full py-20 px-6">
@@ -465,17 +469,17 @@ const ChatInterface = () => {
                       className="h-full lisa-logo"
                       onError={(e) => {
                         e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML = '<span class="text-blue-600 font-bold text-2xl">L</span>';
+                        e.target.parentElement.innerHTML = '<span class="text-blue-600 dark:text-blue-400 font-bold text-2xl">L</span>';
                       }}
                     />
                   </div>
                   
                   {/* Welcome Message */}
                   <div className="space-y-3">
-                    <h2 className="text-3xl font-bold text-gray-800">
+                    <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
                       Welcome to LISA! 👋
                     </h2>
-                    <p className="text-lg text-gray-600 max-w-2xl">
+                    <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl">
                       Your AI assistant for train maintenance, technical support, and questions about train components, systems, and procedures.
                     </p>
                   </div>
@@ -484,27 +488,27 @@ d
 
                   {/* Auth Section */}
                   {!isAuthenticated() ? (
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mt-8 max-w-md mx-auto">
+                    <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-xl p-6 mt-8 max-w-md mx-auto transition-colors duration-300">
                       <div className="text-center space-y-3">
-                        <h3 className="font-semibold text-blue-900">Get More Features</h3>
-                        <p className="text-sm text-blue-700">
+                        <h3 className="font-semibold text-blue-900 dark:text-blue-100">Get More Features</h3>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
                           Sign in to access your personal AI assistant with enhanced capabilities and chat history.
                         </p>
                         <button
                           onClick={handleAuthClick}
-                          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                          className="w-full px-4 py-2 bg-blue-600 dark:bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors font-medium"
                         >
                           Create Account / Sign In
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-6 mt-8 max-w-md mx-auto">
+                    <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-xl p-6 mt-8 max-w-md mx-auto transition-colors duration-300">
                       <div className="text-center space-y-2">
-                        <h3 className="font-semibold text-green-900">
+                        <h3 className="font-semibold text-green-900 dark:text-green-100">
                           Welcome back, {user?.username}! 🎉
                         </h3>
-                        <p className="text-sm text-green-700">
+                        <p className="text-sm text-green-700 dark:text-green-300">
                           Your conversations are automatically saved and you have access to enhanced features.
                         </p>
                       </div>
@@ -513,7 +517,7 @@ d
 
                   {/* Suggested Questions */}
                   <div className="mt-8 space-y-3">
-                    <p className="text-sm text-gray-500">Try asking me about:</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Try asking me about:</p>
                     <div className="flex flex-wrap gap-2 justify-center">
                       {[
                         "SD60M locomotive maintenance",
@@ -524,7 +528,7 @@ d
                         <button
                           key={index}
                           onClick={() => setInput(suggestion)}
-                          className="px-3 py-1 bg-white border border-gray-200 rounded-full text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                          className="px-3 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
                         >
                           {suggestion}
                         </button>
@@ -553,14 +557,14 @@ d
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                     ) : (
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden lisa-logo-container">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden lisa-logo-container bg-gray-100 dark:bg-gray-700">
                         <img 
                           src="/Lisa Logo.png" 
                           alt="LISA" 
                           className="w-5 h-5 object-contain lisa-logo"
                           onError={(e) => {
                             e.target.style.display = 'none';
-                            e.target.parentElement.innerHTML = '<span class="text-blue-600 font-bold text-xs">L</span>';
+                            e.target.parentElement.innerHTML = '<span class="text-blue-600 dark:text-blue-400 font-bold text-xs">L</span>';
                           }}
                         />
                       </div>
@@ -571,11 +575,11 @@ d
                   <div className={`rounded-2xl px-4 py-3 shadow-sm ${
                     message.role === 'user'
                       ? 'bg-blue-500 text-white'
-                      : 'bg-white border border-gray-200 text-gray-800'
+                      : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'
                   }`}>
                     <div className="space-y-2">
                       {/* Message Content */}
-                      <div className={`${message.role === 'user' ? 'text-white' : 'text-gray-800'}`}>
+                      <div className={`${message.role === 'user' ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
                     {renderMessageContent(message)}
                       </div>
                       
@@ -583,7 +587,7 @@ d
                       <div className={`text-xs ${
                         message.role === 'user' 
                           ? 'text-blue-100' 
-                          : 'text-gray-400'
+                          : 'text-gray-400 dark:text-gray-500'
                       } text-right`}>
                         {formatTime(message.timestamp)}
                       </div>
@@ -597,22 +601,22 @@ d
               {isLoading && (
               <div className="flex justify-start mb-6 px-4">
                 <div className="flex items-start space-x-3 max-w-[80%]">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full lisa-logo-container flex items-center justify-center overflow-hidden">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full lisa-logo-container flex items-center justify-center overflow-hidden bg-gray-100 dark:bg-gray-700">
                     <img 
                       src="/Lisa Logo.png" 
                       alt="LISA" 
                       className="w-5 h-5 object-contain lisa-logo"
                       onError={(e) => {
                         e.target.style.display = 'none';
-                        e.target.parentElement.innerHTML = '<span class="text-blue-600 font-bold text-xs">L</span>';
+                        e.target.parentElement.innerHTML = '<span class="text-blue-600 dark:text-blue-400 font-bold text-xs">L</span>';
                       }}
                     />
                   </div>
-                  <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 shadow-sm">
                     <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                     </div>
                     </div>
                   </div>
@@ -625,7 +629,7 @@ d
           </div>
 
         {/* Input Area */}
-        <div className="border-t border-gray-200 bg-slate-200/95 backdrop-blur-sm p-4">
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-slate-200/95 dark:bg-gray-800/95 backdrop-blur-sm p-4 transition-colors duration-300">
           <div className="max-w-4xl mx-auto">
             <form onSubmit={handleSubmit} className="flex gap-3">
               <div className="flex-1 relative">
@@ -634,7 +638,7 @@ d
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Type your message..."
-                  className="w-full p-4 pr-12 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
+                  className="w-full p-4 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-700 shadow-sm transition-colors duration-200"
                   disabled={isLoading}
                   ref={inputRef}
                 />
@@ -642,7 +646,7 @@ d
                   <button
                     type="button"
                     onClick={() => setInput('')}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -668,19 +672,19 @@ d
       {/* Image popup modal */}
       {imagePopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setImagePopup(null)}>
-          <div className="max-w-4xl max-h-[90vh] bg-white rounded-xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-900">{imagePopup.title}</h3>
+          <div className="max-w-4xl max-h-[90vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{imagePopup.title}</h3>
               <button 
                 onClick={() => setImagePopup(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div className="p-4">
+            <div className="p-4 bg-gray-50 dark:bg-gray-900">
               <img 
                 src={imagePopup.url} 
                 alt={imagePopup.title} 

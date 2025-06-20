@@ -181,35 +181,35 @@ const ChatHistory = ({ onLoadConversation, onNewChat, onClose }) => {
     return (
       <div className="h-full flex items-center justify-center p-6">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors duration-300">
+            <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-          <p className="text-gray-500 text-sm">Sign in to view chat history</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm transition-colors duration-300">Sign in to view chat history</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-white dark:bg-gray-800 transition-colors duration-300">
       {/* Clean Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="flex items-center space-x-3">
-          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.955 8.955 0 01-4.126-.98L3 21l1.98-5.874A8.955 8.955 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
           </svg>
           <div>
-            <h2 className="font-semibold text-gray-900">Chat History</h2>
-            <p className="text-xs text-gray-500">{conversations.length} conversations</p>
+            <h2 className="font-semibold text-gray-900 dark:text-gray-100 transition-colors duration-300">Chat History</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">{conversations.length} conversations</p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
         >
-          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
@@ -219,7 +219,7 @@ const ChatHistory = ({ onLoadConversation, onNewChat, onClose }) => {
       <div className="p-4">
         <button
           onClick={onNewChat}
-          className="w-full bg-green-500 hover:bg-green-600 text-white py-2.5 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+          className="w-full bg-green-500 dark:bg-green-600 hover:bg-green-600 dark:hover:bg-green-700 text-white py-2.5 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -235,9 +235,9 @@ const ChatHistory = ({ onLoadConversation, onNewChat, onClose }) => {
             type="text"
             placeholder="Search conversations..."
             onChange={handleSearch}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-colors duration-300"
           />
-          <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
@@ -247,20 +247,20 @@ const ChatHistory = ({ onLoadConversation, onNewChat, onClose }) => {
       <div className="flex-1 overflow-y-auto">
         {isLoading && (
           <div className="p-6 text-center">
-            <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-            <p className="text-gray-500 text-sm">Loading...</p>
+            <div className="animate-spin w-6 h-6 border-2 border-blue-500 dark:border-blue-400 border-t-transparent rounded-full mx-auto mb-2"></div>
+            <p className="text-gray-500 dark:text-gray-400 text-sm transition-colors duration-300">Loading...</p>
           </div>
         )}
 
         {!isLoading && filteredConversations.length === 0 && (
           <div className="p-6 text-center">
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3 transition-colors duration-300">
+              <svg className="w-6 h-6 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.955 8.955 0 01-4.126-.98L3 21l1.98-5.874A8.955 8.955 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z" />
               </svg>
             </div>
-            <p className="text-gray-500 text-sm">No conversations yet</p>
-            <p className="text-gray-400 text-xs mt-1">Start chatting to see your history</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm transition-colors duration-300">No conversations yet</p>
+            <p className="text-gray-400 dark:text-gray-500 text-xs mt-1 transition-colors duration-300">Start chatting to see your history</p>
           </div>
         )}
 
@@ -280,20 +280,20 @@ const ChatHistory = ({ onLoadConversation, onNewChat, onClose }) => {
           return (
             <div
               key={threadId}
-              className="mx-3 mb-1 p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors group border border-transparent hover:border-gray-200"
+              className="mx-3 mb-1 p-3 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
               onClick={handleConversationClick}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-1">
-                    <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></div>
-                    <h3 className="text-sm font-medium text-gray-900 truncate">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 flex-shrink-0"></div>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate transition-colors duration-300">
                       {truncateTitle(title)}
                     </h3>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
                     <span>{formatDate(updatedAt)}</span>
-                    <span className="bg-gray-100 px-2 py-0.5 rounded-full">
+                    <span className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full transition-colors duration-300">
                       {messageCount} msg{messageCount !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -301,7 +301,7 @@ const ChatHistory = ({ onLoadConversation, onNewChat, onClose }) => {
                 <button
                   data-delete="true"
                   onClick={(e) => handleDeleteConversation(threadId, e)}
-                  className="opacity-0 group-hover:opacity-100 ml-2 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                  className="opacity-0 group-hover:opacity-100 ml-2 p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-all"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -314,8 +314,8 @@ const ChatHistory = ({ onLoadConversation, onNewChat, onClose }) => {
       </div>
 
       {/* Clean Footer */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex items-center justify-center text-xs text-gray-500">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 transition-colors duration-300">
+        <div className="flex items-center justify-center text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>

@@ -23,31 +23,31 @@ const LoadingSpinner = ({
   const getColorClasses = () => {
     switch (color) {
       case 'white':
-        return 'border-white border-t-transparent';
+        return 'border-white dark:border-gray-200 border-t-transparent';
       case 'gray':
-        return 'border-gray-300 border-t-transparent';
+        return 'border-gray-300 dark:border-gray-600 border-t-transparent';
       case 'green':
-        return 'border-green-500 border-t-transparent';
+        return 'border-green-500 dark:border-green-400 border-t-transparent';
       case 'red':
-        return 'border-red-500 border-t-transparent';
+        return 'border-red-500 dark:border-red-400 border-t-transparent';
       case 'yellow':
-        return 'border-yellow-500 border-t-transparent';
+        return 'border-yellow-500 dark:border-yellow-400 border-t-transparent';
       default:
-        return 'border-blue-500 border-t-transparent';
+        return 'border-blue-500 dark:border-blue-400 border-t-transparent';
     }
   };
 
   const spinner = (
-    <div className={`animate-spin ${getSizeClasses()} border-2 ${getColorClasses()} rounded-full ${className}`}></div>
+    <div className={`animate-spin ${getSizeClasses()} border-2 ${getColorClasses()} rounded-full transition-colors duration-300 ${className}`}></div>
   );
 
   if (fullScreen) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-8 shadow-lg">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-lg border border-gray-100 dark:border-gray-700 transition-colors duration-300">
           <div className="text-center">
             {spinner}
-            {text && <p className="mt-4 text-gray-600">{text}</p>}
+            {text && <p className="mt-4 text-gray-600 dark:text-gray-300 transition-colors duration-300">{text}</p>}
           </div>
         </div>
       </div>
@@ -58,7 +58,7 @@ const LoadingSpinner = ({
     return (
       <div className="flex items-center justify-center space-x-2">
         {spinner}
-        <span className="text-gray-600">{text}</span>
+        <span className="text-gray-600 dark:text-gray-300 transition-colors duration-300">{text}</span>
       </div>
     );
   }
@@ -67,39 +67,40 @@ const LoadingSpinner = ({
 };
 
 // Skeleton loader for content
-export const SkeletonLoader = ({ lines = 3, className = '' }) => {
-  return (
-    <div className={`animate-pulse ${className}`}>
-      {Array.from({ length: lines }).map((_, index) => (
-        <div
-          key={index}
-          className={`bg-gray-200 rounded h-4 mb-2 ${
-            index === lines - 1 ? 'w-3/4' : 'w-full'
-          }`}
-        ></div>
-      ))}
-    </div>
-  );
-};
+export const SkeletonLoader = ({ className = '', lines = 3, animate = true }) => (
+  <div className={`space-y-3 ${className}`}>
+    {Array.from({ length: lines }).map((_, index) => (
+      <div
+        key={index}
+        className={`h-4 bg-gray-200 dark:bg-gray-700 rounded transition-colors duration-300 ${
+          animate ? 'animate-pulse' : ''
+        }`}
+        style={{
+          width: `${Math.random() * 40 + 60}%`
+        }}
+      ></div>
+    ))}
+  </div>
+);
 
-// Card skeleton loader
-export const CardSkeleton = ({ className = '' }) => {
-  return (
-    <div className={`animate-pulse bg-white rounded-lg p-6 shadow ${className}`}>
+// Card skeleton for loading cards
+export const CardSkeleton = ({ className = '' }) => (
+  <div className={`bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 transition-colors duration-300 ${className}`}>
+    <div className="animate-pulse">
       <div className="flex items-center space-x-4">
-        <div className="rounded-full bg-gray-200 h-12 w-12"></div>
+        <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
         <div className="flex-1 space-y-2">
-          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
         </div>
       </div>
       <div className="mt-4 space-y-2">
-        <div className="h-4 bg-gray-200 rounded"></div>
-        <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 // Table skeleton loader
 export const TableSkeleton = ({ rows = 5, columns = 4, className = '' }) => {

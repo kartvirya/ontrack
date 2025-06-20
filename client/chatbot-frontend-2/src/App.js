@@ -8,6 +8,7 @@ import AuthPage from './components/AuthPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider } from './components/AuthContext';
+import { ThemeProvider } from './components/ThemeContext';
 import { NotificationProvider } from './components/NotificationSystem';
 import AdminRoute from './components/AdminRoute';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -63,11 +64,13 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
-    <AuthProvider>
-      <NotificationProvider>
-          <AppContent />
-      </NotificationProvider>
-    </AuthProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <NotificationProvider>
+              <AppContent />
+            </NotificationProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </Router>
     </ErrorBoundary>
   );
