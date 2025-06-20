@@ -539,6 +539,152 @@ router.get('/vector-stores', logActivity('admin_view_vector_stores'), async (req
   }
 });
 
+// Create new vector store
+router.post('/vector-stores', upload.array('files'), logActivity('admin_create_vector_store'), async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    const files = req.files;
+    
+    console.log('📁 Creating vector store:', name);
+    console.log('📁 Description:', description);
+    console.log('📁 Files provided:', files ? files.length : 0);
+    
+    if (!name) {
+      return res.status(400).json({ error: 'Vector store name is required' });
+    }
+    
+    const OpenAI = require('openai');
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    
+    // Create vector store in OpenAI
+    const vectorStore = await openai.beta.vectorStores.create({
+      name: name,
+      expires_after: {
+        anchor: "last_active_at",
+        days: 90
+      }
+    });
+    
+    console.log(`✅ Vector store created in OpenAI: ${vectorStore.id}`);
+    
+    let fileCount = 0;
+    let uploadResults = [];
+    
+    // Upload files if provided
+    if (files && files.length > 0) {
+      console.log(`📄 Uploading ${files.length} files to vector store`);
+      
+      for (const file of files) {
+        try {
+          console.log(`⬆️ Uploading file: ${file.originalname} (${file.size} bytes)`);
+          
+          // Check if file exists
+          if (!require('fs').existsSync(file.path)) {
+            throw new Error('Uploaded file not found on disk');
+          }
+          
+          // Upload file to OpenAI
+          const fileStream = require('fs').createReadStream(file.path);
+          const openaiFile = await openai.files.create({
+            file: fileStream,
+            purpose: 'assistants'
+          });
+          
+          console.log(`✅ File uploaded to OpenAI: ${openaiFile.id}`);
+          
+          // Add file to vector store
+          await openai.beta.vectorStores.files.create(vectorStore.id, {
+            file_id: openaiFile.id
+          });
+          
+          uploadResults.push({
+            filename: file.originalname,
+            fileId: openaiFile.id,
+            success: true
+          });
+          
+          fileCount++;
+          console.log(`✅ Successfully added to vector store: ${file.originalname}`);
+          
+          // Clean up uploaded file
+          try {
+            require('fs').unlinkSync(file.path);
+          } catch (cleanupError) {
+            console.warn(`⚠️ Failed to cleanup file: ${file.path}`, cleanupError.message);
+          }
+          
+        } catch (fileError) {
+          console.error(`❌ Failed to upload ${file.originalname}:`, fileError.message);
+          uploadResults.push({
+            filename: file.originalname,
+            success: false,
+            error: fileError.message
+          });
+          
+          // Clean up failed upload file
+          try {
+            if (file.path && require('fs').existsSync(file.path)) {
+              require('fs').unlinkSync(file.path);
+            }
+          } catch (cleanupError) {
+            console.warn(`⚠️ Failed to cleanup failed file: ${file.path}`);
+          }
+        }
+      }
+    }
+    
+    // Save to database
+    await query(`
+      INSERT INTO vector_stores 
+      (user_id, store_id, store_name, description, file_count)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [req.user.id, vectorStore.id, name, description || '', fileCount]);
+    
+    console.log('✅ Vector store saved to database');
+    
+    const successCount = uploadResults.filter(r => r.success).length;
+    const failCount = uploadResults.filter(r => !r.success).length;
+    
+    let message = 'Vector store created successfully';
+    if (files && files.length > 0) {
+      message += `. Uploaded ${successCount} files${failCount > 0 ? `, ${failCount} failed` : ''}`;
+    }
+    
+    res.status(201).json({
+      message,
+      vectorStore: {
+        id: vectorStore.id,
+        store_id: vectorStore.id,
+        store_name: name,
+        description: description || '',
+        file_count: fileCount,
+        created_at: new Date().toISOString()
+      },
+      uploadResults: uploadResults.length > 0 ? uploadResults : undefined
+    });
+  } catch (error) {
+    console.error('❌ Error creating vector store:', error);
+    
+    // Clean up any uploaded files on error
+    if (req.files) {
+      req.files.forEach(file => {
+        try {
+          if (file.path && require('fs').existsSync(file.path)) {
+            require('fs').unlinkSync(file.path);
+          }
+        } catch (cleanupError) {
+          console.warn(`⚠️ Failed to cleanup file on error: ${file.path}`);
+        }
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to create vector store: ' + error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 // Update vector store
 router.patch('/vector-stores/:storeId', logActivity('admin_update_vector_store'), async (req, res) => {
   try {
