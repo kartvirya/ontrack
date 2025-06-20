@@ -16,6 +16,8 @@ const ChatInterface = () => {
   const [imagePopup, setImagePopup] = useState(null);
   const [showSidebar, setShowSidebar] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveTimeout, setSaveTimeout] = useState(null);
 
   const { user, isAuthenticated, isAdmin, logout, getAuthHeaders, API_URL } = useAuth();
   const { addNotification } = useNotifications();
@@ -41,11 +43,15 @@ const ChatInterface = () => {
     }
   }, [isAuthenticated]);
 
-  // Save conversation to backend when messages change
+  // Save conversation to backend when messages change (with debounce and error prevention)
   const saveConversation = useCallback(async () => {
-    if (!isAuthenticated() || !threadId || messages.length === 0) return;
+    if (!isAuthenticated() || !threadId || messages.length === 0 || isSaving) {
+      return;
+    }
 
     try {
+      setIsSaving(true);
+      
       // Generate a title from the first user message
       const firstUserMessage = messages.find(msg => msg.role === 'user');
       const title = firstUserMessage ? 
@@ -54,11 +60,19 @@ const ChatInterface = () => {
 
       console.log('Saving conversation:', { threadId, title, messageCount: messages.length });
 
+      const authHeaders = getAuthHeaders();
+      
+      // Check if we have valid auth headers
+      if (!authHeaders.Authorization) {
+        console.warn('No authorization token available, skipping save');
+        return;
+      }
+
       const response = await fetch(`${API_URL}/api/chat/history`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getAuthHeaders()
+          ...authHeaders
         },
         body: JSON.stringify({
           threadId,
@@ -68,29 +82,59 @@ const ChatInterface = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Failed to save conversation:', errorData);
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          console.error('Save conversation failed:', errorData);
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
       console.log('Conversation saved successfully:', result);
     } catch (error) {
       console.error('Error saving conversation:', error);
-      addNotification({
-        type: 'error',
-        title: 'Save Failed',
-        message: 'Failed to save conversation. Your messages may not be preserved.',
-        duration: 5000
-      });
+      
+      // Only show notification for actual errors, not auth issues
+      if (!error.message.includes('token') && !error.message.includes('auth')) {
+        addNotification({
+          type: 'error',
+          title: 'Save Failed',
+          message: 'Failed to save conversation. Your messages may not be preserved.',
+          duration: 5000
+        });
+      }
+    } finally {
+      setIsSaving(false);
     }
-  }, [isAuthenticated, threadId, messages, API_URL, getAuthHeaders, addNotification]);
+  }, [isAuthenticated, threadId, messages, API_URL, getAuthHeaders, addNotification, isSaving]);
 
+  // Debounced save effect to prevent excessive save attempts
   useEffect(() => {
-    if (isAuthenticated() && threadId && messages.length > 0) {
-      saveConversation();
+    if (isAuthenticated() && threadId && messages.length > 0 && !isSaving) {
+      // Clear existing timeout
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
+      
+      // Set new timeout to save after 2 seconds of inactivity
+      const newTimeout = setTimeout(() => {
+        saveConversation();
+      }, 2000);
+      
+      setSaveTimeout(newTimeout);
+      
+      // Cleanup function
+      return () => {
+        if (newTimeout) {
+          clearTimeout(newTimeout);
+        }
+      };
     }
-  }, [messages, threadId, isAuthenticated, saveConversation]);
+  }, [messages, threadId, isAuthenticated, saveConversation, isSaving]);
 
   const handleLoadConversation = (loadedMessages, loadedThreadId) => {
     setMessages(loadedMessages);
@@ -483,8 +527,6 @@ const ChatInterface = () => {
                       Your AI assistant for train maintenance, technical support, and questions about train components, systems, and procedures.
                     </p>
                   </div>
-
-d
 
                   {/* Auth Section */}
                   {!isAuthenticated() ? (
