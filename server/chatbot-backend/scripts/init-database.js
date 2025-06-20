@@ -126,6 +126,20 @@ const createTables = async () => {
     `);
           console.log('✅ Activity Logs table created/verified');
 
+      // User Activity table (for middleware compatibility)
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS user_activity (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          action VARCHAR(100) NOT NULL,
+          details TEXT,
+          ip_address INET,
+          user_agent TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+          console.log('✅ User Activity table created/verified');
+
       // User Profiles table
     await client.query(`
         CREATE TABLE IF NOT EXISTS user_profiles (
