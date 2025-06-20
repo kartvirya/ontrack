@@ -1028,6 +1028,63 @@ app.post('/api/test-conversation-save', async (req, res) => {
   }
 });
 
+// Debug endpoint to check activities data
+app.get('/api/debug-activities', async (req, res) => {
+  try {
+    console.log('🔍 Checking user_activity table...');
+    
+    // Check if table exists
+    const tableExists = await query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'user_activity'
+      )
+    `);
+    
+    console.log('Table exists:', tableExists.rows[0].exists);
+    
+    if (!tableExists.rows[0].exists) {
+      return res.json({ error: 'user_activity table does not exist' });
+    }
+    
+    // Get count of activities
+    const countResult = await query('SELECT COUNT(*) as count FROM user_activity');
+    console.log('Total activities:', countResult.rows[0].count);
+    
+    // Get recent activities
+    const activities = await query(`
+      SELECT 
+        ua.id,
+        ua.user_id,
+        ua.action, 
+        ua.details, 
+        ua.ip_address, 
+        ua.created_at,
+        u.username
+      FROM user_activity ua
+      LEFT JOIN users u ON ua.user_id = u.id
+      ORDER BY ua.created_at DESC
+      LIMIT 10
+    `);
+    
+    console.log('Recent activities:', activities.rows.length);
+    
+    res.json({
+      tableExists: tableExists.rows[0].exists,
+      totalCount: countResult.rows[0].count,
+      recentActivities: activities.rows
+    });
+    
+  } catch (error) {
+    console.error('Debug activities error:', error);
+    res.status(500).json({
+      error: 'Debug failed',
+      details: error.message
+    });
+  }
+});
+
 // Schema fix endpoint for conversations table
 app.post('/api/fix-schema', async (req, res) => {
   try {
