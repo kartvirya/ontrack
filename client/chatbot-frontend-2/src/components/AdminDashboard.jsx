@@ -697,6 +697,8 @@ const DashboardTab = ({ stats, assistants, vectorStores, users }) => {
 // Users Tab Component
 const UsersTab = ({ users, assistants, updateUserStatus, deleteUser, assignAssistant, removeAssistant, setShowAssignAssistant, setSelectedUser, setSuccess, setError, fetchData }) => {
   const [showCreateUser, setShowCreateUser] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const { getAuthHeaders, API_URL } = useAuth();
 
   const handleAssignAssistant = (user) => {
@@ -729,20 +731,149 @@ const UsersTab = ({ users, assistants, updateUserStatus, deleteUser, assignAssis
     }
   };
 
+  // Filter users based on search and status
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Calculate statistics
+  const stats = {
+    total: users.length,
+    active: users.filter(u => u.status === 'active').length,
+    suspended: users.filter(u => u.status === 'suspended').length,
+    withAssistants: users.filter(u => u.openai_assistant_id).length,
+    admins: users.filter(u => u.role === 'admin').length
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">User Management</h3>
-          <p className="text-sm text-gray-600 mt-1">Manage user accounts, permissions, and assistant assignments</p>
-              </div>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">User Management</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Manage user accounts, permissions, and assistant assignments</p>
+        </div>
         <button
           onClick={() => setShowCreateUser(true)}
-          className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-colors shadow-sm"
+          className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2 font-medium"
         >
-          + Add User
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          <span>Add New User</span>
         </button>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Total Users</p>
+            </div>
           </div>
+        </div>
+        
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.active}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Active</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+              <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.suspended}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Suspended</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.withAssistants}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">With Assistants</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+              <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.admins}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Admins</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
+          <div className="flex-1">
+            <div className="relative">
+              <svg className="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search users by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
+              />
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+              <option value="pending">Pending</option>
+            </select>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {filteredUsers.length} of {users.length} users
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Create User Modal */}
       {showCreateUser && (
@@ -752,120 +883,148 @@ const UsersTab = ({ users, assistants, updateUserStatus, deleteUser, assignAssis
         />
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
-        <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">User Management</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Manage user accounts, permissions, and assistant assignments</p>
-        </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-900">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Assistant</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Active</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {users.map((user) => {
-                const userAssistant = assistants.find(a => a.user_id === user.id || user.openai_assistant_id === a.assistant_id);
-                
-                return (
-                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-medium">
-                          {user.username?.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.username}</div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
-                          {user.role === 'admin' && (
-                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 mt-1">
-                              Admin
-                            </span>
-                          )}
-                    </div>
+      {/* Users Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {filteredUsers.map((user) => {
+          const userAssistant = assistants.find(a => a.user_id === user.id || user.openai_assistant_id === a.assistant_id);
+          
+          return (
+            <div key={user.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-300">
+              {/* User Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md">
+                    {user.username?.charAt(0).toUpperCase()}
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    user.status === 'active' ? 'bg-green-100 text-green-800' : 
-                    user.status === 'suspended' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{user.username}</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {user.role === 'admin' && (
+                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30 text-purple-800 dark:text-purple-300 shadow-sm">
+                      Admin
+                    </span>
+                  )}
+                  <span className={`px-3 py-1 text-xs font-semibold rounded-full shadow-sm ${
+                    user.status === 'active' 
+                      ? 'bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 text-green-800 dark:text-green-300' 
+                      : user.status === 'suspended' 
+                      ? 'bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30 text-red-800 dark:text-red-300' 
+                      : 'bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 text-gray-800 dark:text-gray-300'
                   }`}>
-                    {user.status}
+                    {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                   </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                      {userAssistant || user.openai_assistant_id ? (
-                        <div className="flex flex-col">
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                            {userAssistant?.assistant_name || 'Assigned'}
+                </div>
+              </div>
+
+              {/* User Details */}
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Assistant:</span>
+                  <div className="text-right">
+                    {userAssistant || user.openai_assistant_id ? (
+                      <div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {userAssistant?.assistant_name || 'Assigned'}
                         </span>
-                          <span className="text-xs text-gray-500 mt-1">
-                            {userAssistant?.model || 'Unknown Model'}
-                          </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {userAssistant?.model || 'Unknown Model'}
+                        </p>
                       </div>
                     ) : (
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                          No Assistant
-                      </span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">No Assistant</span>
                     )}
-                </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex space-x-2">
-                    {user.status === 'active' ? (
-                      <button
-                        onClick={() => updateUserStatus(user.id, 'suspended')}
-                            className="text-red-600 hover:text-red-800 font-medium"
-                      >
-                        Suspend
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => updateUserStatus(user.id, 'active')}
-                            className="text-green-600 hover:text-green-800 font-medium"
-                      >
-                        Activate
-                      </button>
-                    )}
-                    
-                        {userAssistant || user.openai_assistant_id ? (
-                          <button
-                            onClick={() => removeAssistant(user.id)}
-                            className="text-orange-600 hover:text-orange-800 font-medium"
-                          >
-                            Remove Assistant
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleAssignAssistant(user)}
-                            className="text-blue-600 hover:text-blue-800 font-medium"
-                          >
-                            Assign Assistant
-                          </button>
-                        )}
-                    
-                    <button
-                      onClick={() => deleteUser(user.id)}
-                          className="text-gray-600 hover:text-gray-800 font-medium"
-                    >
-                      Delete
-                    </button>
                   </div>
-                </td>
-              </tr>
-                );
-              })}
-          </tbody>
-        </table>
-        </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Last Active:</span>
+                  <span className="text-sm text-gray-900 dark:text-gray-100">
+                    {user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Member Since:</span>
+                  <span className="text-sm text-gray-900 dark:text-gray-100">
+                    {new Date(user.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                {user.status === 'active' ? (
+                  <button
+                    onClick={() => updateUserStatus(user.id, 'suspended')}
+                    className="px-3 py-2 text-xs font-medium bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors duration-200 border border-red-200 dark:border-red-700"
+                  >
+                    Suspend
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => updateUserStatus(user.id, 'active')}
+                    className="px-3 py-2 text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-lg transition-colors duration-200 border border-green-200 dark:border-green-700"
+                  >
+                    Activate
+                  </button>
+                )}
+                
+                {userAssistant || user.openai_assistant_id ? (
+                  <button
+                    onClick={() => removeAssistant(user.id)}
+                    className="px-3 py-2 text-xs font-medium bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/50 rounded-lg transition-colors duration-200 border border-orange-200 dark:border-orange-700"
+                  >
+                    Remove Assistant
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleAssignAssistant(user)}
+                    className="px-3 py-2 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors duration-200 border border-blue-200 dark:border-blue-700"
+                  >
+                    Assign Assistant
+                  </button>
+                )}
+                
+                <button
+                  onClick={() => deleteUser(user.id)}
+                  className="px-3 py-2 text-xs font-medium bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors duration-200 border border-gray-200 dark:border-gray-600"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
+
+      {/* Empty State */}
+      {filteredUsers.length === 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center transition-colors duration-300">
+          <svg className="mx-auto h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+          </svg>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+            {searchTerm || statusFilter !== 'all' ? 'No users found' : 'No users yet'}
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {searchTerm || statusFilter !== 'all' 
+              ? 'Try adjusting your search or filter criteria.' 
+              : 'Get started by creating your first user account.'
+            }
+          </p>
+          {(!searchTerm && statusFilter === 'all') && (
+            <button
+              onClick={() => setShowCreateUser(true)}
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+            >
+              Create First User
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
