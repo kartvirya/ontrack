@@ -92,13 +92,13 @@ async function initializeDatabase() {
     `);
     console.log('✅ Conversation Messages table created/verified');
     
-    // User activity table
+    // User activity table (for middleware compatibility)
     await client.query(`
       CREATE TABLE IF NOT EXISTS user_activity (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        activity_type VARCHAR(50) NOT NULL,
-        activity_data JSONB DEFAULT '{}',
+        action VARCHAR(100) NOT NULL,
+        details TEXT,
         ip_address INET,
         user_agent TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
