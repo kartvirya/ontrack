@@ -1024,19 +1024,34 @@ router.get('/activities', logActivity('admin_view_activities'), async (req, res)
   try {
     const { limit = 100, offset = 0 } = req.query;
     
+    console.log('🔍 Fetching activities with limit:', limit, 'offset:', offset);
+    
+    // First check if user_activity table exists and what columns it has
+    const tableCheck = await query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'user_activity' AND table_schema = 'public'
+      ORDER BY ordinal_position
+    `);
+    
+    console.log('📋 User activity table columns:', tableCheck.rows.map(r => r.column_name));
+    
+    // Try the query with error handling
     const result = await query(`
       SELECT 
-        ua.action, 
-        ua.details, 
-        ua.ip_address, 
-        ua.user_agent, 
-        ua.created_at,
-        u.username
-      FROM user_activity ua
-      LEFT JOIN users u ON ua.user_id = u.id
-      ORDER BY ua.created_at DESC
+        user_activity.action, 
+        user_activity.details, 
+        user_activity.ip_address, 
+        user_activity.user_agent, 
+        user_activity.created_at,
+        users.username
+      FROM user_activity
+      LEFT JOIN users ON user_activity.user_id = users.id
+      ORDER BY user_activity.created_at DESC
       LIMIT $1 OFFSET $2
     `, [parseInt(limit), parseInt(offset)]);
+    
+    console.log('✅ Activities query successful, found:', result.rows.length, 'activities');
     
     // Get total count for pagination
     const countResult = await query(`
@@ -1051,8 +1066,18 @@ router.get('/activities', logActivity('admin_view_activities'), async (req, res)
       offset: parseInt(offset)
     });
   } catch (error) {
-    console.error('Error fetching activities:', error);
-    res.status(500).json({ error: 'Database error' });
+    console.error('❌ Error fetching activities:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint
+    });
+    res.status(500).json({ 
+      error: 'Database error',
+      details: error.message,
+      code: error.code
+    });
   }
 });
 
