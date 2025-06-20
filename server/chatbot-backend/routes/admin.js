@@ -122,7 +122,7 @@ router.post('/users', logActivity('admin_create_user'), async (req, res) => {
     
     // Create user
     const result = await query(`
-      INSERT INTO users (username, email, password, role, status)
+      INSERT INTO users (username, email, password_hash, role, status)
       VALUES ($1, $2, $3, $4, $5)
       RETURNING id, username, email, role, status, created_at
     `, [username, email, hashedPassword, role, status]);
