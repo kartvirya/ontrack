@@ -1841,15 +1841,6 @@ const ActivitiesTab = ({ activities, onCleanup }) => {
           <div className="text-sm text-gray-600 dark:text-gray-400">
             Total Activities: <span className="font-semibold text-gray-900 dark:text-gray-100">{activities.length}</span>
           </div>
-          <button
-            onClick={() => setShowCleanupModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2 font-medium"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            <span>Cleanup Old Activities</span>
-          </button>
         </div>
       </div>
 
