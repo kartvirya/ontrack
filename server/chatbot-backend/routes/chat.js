@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // Get conversation history
-router.get('/history', logActivity('chat_history_view'), async (req, res) => {
+router.get('/history', logActivity('chat_history_load'), async (req, res) => {
   try {
     const userId = req.user.id;
     const { limit = 20, offset = 0 } = req.query;
@@ -57,7 +57,7 @@ router.get('/history', logActivity('chat_history_view'), async (req, res) => {
 });
 
 // Get specific conversation with messages
-router.get('/history/:threadId', logActivity('chat_conversation_view'), async (req, res) => {
+router.get('/history/:threadId', logActivity('chat_history_load'), async (req, res) => {
   try {
     const userId = req.user.id;
     const { threadId } = req.params;
@@ -96,7 +96,7 @@ router.get('/history/:threadId', logActivity('chat_conversation_view'), async (r
 });
 
 // Delete conversation
-router.delete('/history/:threadId', logActivity('chat_conversation_delete'), async (req, res) => {
+router.delete('/history/:threadId', async (req, res) => {
   try {
     const userId = req.user.id;
     const { threadId } = req.params;
@@ -272,7 +272,7 @@ router.post('/history', logActivity('chat_history_save'), async (req, res) => {
 });
 
 // Get conversation statistics
-router.get('/stats', logActivity('chat_stats_view'), async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -309,7 +309,7 @@ router.get('/stats', logActivity('chat_stats_view'), async (req, res) => {
 });
 
 // Search chat history
-router.get('/search', logActivity('search_chat_history'), async (req, res) => {
+router.get('/search', async (req, res) => {
   try {
     const userId = req.user.id;
     const { q: query_text, dateRange, messageType, sortBy, limit = 50 } = req.query;
@@ -428,7 +428,7 @@ router.get('/search', logActivity('search_chat_history'), async (req, res) => {
 });
 
 // Export conversation (for backup/download)
-router.get('/export/:threadId', logActivity('chat_export'), async (req, res) => {
+router.get('/export/:threadId', async (req, res) => {
   try {
     const userId = req.user.id;
     const { threadId } = req.params;

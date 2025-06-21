@@ -699,7 +699,7 @@ app.get('/api/ietms/image/:filename', (req, res) => {
 
 // Enhanced chat API that checks for train part, schematic, and IETMS requests
 // Now supports both authenticated users (with personal assistants) and anonymous users
-app.post('/api/chat', logActivity('chat_message'), async (req, res) => {
+app.post('/api/chat', logActivity('chat_message_sent'), async (req, res) => {
   try {
     const { message, threadId } = req.body;
     let userAssistantId = process.env.ASSISTANT_ID; // Default assistant
