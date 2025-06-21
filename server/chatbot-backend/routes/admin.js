@@ -1615,4 +1615,25 @@ router.post('/system/cleanup', logActivity('admin_system_cleanup'), async (req, 
   }
 });
 
+// Cleanup non-chat activities
+router.post('/activities/cleanup', async (req, res) => {
+  try {
+    const { cleanupActivities } = require('../scripts/cleanup-activities');
+    
+    console.log('🧹 Admin triggered activity cleanup');
+    await cleanupActivities();
+    
+    res.json({ 
+      message: 'Activity cleanup completed successfully',
+      status: 'success'
+    });
+  } catch (error) {
+    console.error('Error during activity cleanup:', error);
+    res.status(500).json({ 
+      error: 'Error during activity cleanup',
+      details: error.message 
+    });
+  }
+});
+
 module.exports = router; 
