@@ -12,7 +12,14 @@
     "build": "echo 'No build step required for Node.js backend'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["lisa", "ai", "train", "maintenance", "assistant", "api"],
+  "keywords": [
+    "lisa",
+    "ai",
+    "train",
+    "maintenance",
+    "assistant",
+    "api"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -25,6 +32,7 @@
     "express-session": "^1.18.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.0",
+    "node-fetch": "^2.6.7",
     "nodemailer": "^6.10.1",
     "openai": "^4.85.1",
     "pg": "^8.11.3",
