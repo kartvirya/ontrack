@@ -406,6 +406,33 @@ const AdminDashboard = () => {
     setSuccess('');
   };
 
+  const cleanupActivities = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/admin/activities/cleanup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSuccess(`Activity cleanup completed successfully! ${data.message || ''}`);
+        fetchData(); // Refresh activities
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to cleanup activities');
+      }
+    } catch (error) {
+      setError('Failed to cleanup activities');
+      console.error('Cleanup activities error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await logout(navigate);
@@ -565,7 +592,7 @@ const AdminDashboard = () => {
               removeFileFromVectorStore={removeFileFromVectorStore}
             />
           )}
-          {activeTab === 'activities' && <ActivitiesTab activities={activities} />}
+          {activeTab === 'activities' && <ActivitiesTab activities={activities} onCleanup={cleanupActivities} />}
                       </div>
                       </div>
 
@@ -1794,13 +1821,107 @@ const AssignAssistantModal = ({ user, assistants, onClose, onSubmit }) => {
 };
 
 // Activities Tab Component
-const ActivitiesTab = ({ activities }) => {
+const ActivitiesTab = ({ activities, onCleanup }) => {
+  const [showCleanupModal, setShowCleanupModal] = useState(false);
+  
+  const handleCleanup = () => {
+    setShowCleanupModal(false);
+    onCleanup();
+  };
+
   return (
     <div className="space-y-6">
+      {/* Header with cleanup controls */}
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
+        <div>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Activity Management</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Monitor user actions and manage activity logs</p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Total Activities: <span className="font-semibold text-gray-900 dark:text-gray-100">{activities.length}</span>
+          </div>
+          <button
+            onClick={() => setShowCleanupModal(true)}
+            className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2 font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            <span>Cleanup Old Activities</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Activity Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {activities.filter(a => a.action.includes('chat_message')).length}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Chat Messages</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {activities.filter(a => a.action.includes('login')).length}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">User Logins</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {activities.filter(a => a.action.includes('history')).length}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">History Actions</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+              <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{activities.length}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Total Activities</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
         <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">System Activities</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Monitor user actions and system events</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Activities</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Latest user interactions and system events</p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -1832,7 +1953,72 @@ const ActivitiesTab = ({ activities }) => {
             </tbody>
           </table>
         </div>
+        
+        {/* Empty State */}
+        {activities.length === 0 && (
+          <div className="p-12 text-center">
+            <svg className="mx-auto h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Activities Found</h3>
+            <p className="text-gray-600 dark:text-gray-400">No user activities have been logged yet, or all activities have been cleaned up.</p>
+          </div>
+        )}
       </div>
+
+      {/* Cleanup Confirmation Modal */}
+      {showCleanupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md transition-colors duration-300">
+            <div className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                  <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cleanup Activities</h3>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-700 dark:text-gray-300 mb-4">
+                  This will remove old non-chat activities from the database. The following will be deleted:
+                </p>
+                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 mb-4">
+                  <li>• Admin dashboard views</li>
+                  <li>• User management actions</li>
+                  <li>• System health checks</li>
+                  <li>• Profile updates</li>
+                  <li>• Other administrative activities</li>
+                </ul>
+                <div className="p-3 bg-green-50 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-700">
+                  <p className="text-sm text-green-800 dark:text-green-300 font-medium">
+                    ✅ Chat-related activities will be preserved:
+                  </p>
+                  <p className="text-xs text-green-700 dark:text-green-400 mt-1">
+                    Messages, conversations, logins, and chat history will remain intact.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowCleanupModal(false)}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCleanup}
+                  className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-colors font-medium shadow-sm"
+                >
+                  Cleanup Activities
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
